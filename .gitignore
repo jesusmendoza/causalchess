@@ -1,0 +1,50 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Large chess datasets and logs
+lichess_data/
+*.log
+*.bin
+*.json
+*.jsonl
+*.zst
+*.pgn
+data/
+data_elo/
+data_style/
+logs/
+models/
+
+# Model checkpoints, engine nets and dataset/eval dumps (host on a release / Zenodo, not git)
+*.pt
+*.pth
+*.nnue
+*.tsv
+paper3_experiments/dataset_*/
+paper3_experiments/*_dataset.pt
+
+# LaTeX build artifacts (keep the tex source and figures, ignore generated files)
+paper/*.aux
+paper/*.log
+paper/*.toc
+paper/*.synctex.gz
+paper/*.pdf
+paper/*.bbl
+paper/*.blg
+paper/*.out
+paper/*.fdb_latexmk
+paper/*.fls
+paper/.nfs*
+
+# Nested repos and third party code
+paper3_experiments/nnue-pytorch/
+paper3_experiments/repo_cchess/
+
