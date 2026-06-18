@@ -59,6 +59,9 @@ paper/
 paper3_experiments/
 # Regenerable evaluation output figures
 evaluation/results_*/
+# Exploratory scripts not part of the paper
+eval_embeddings.py
+evaluation/test_latent_walk.py
 # Stray symlink to external data
 lichess_data
 
