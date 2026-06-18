@@ -48,3 +48,17 @@ paper/.nfs*
 paper3_experiments/nnue-pytorch/
 paper3_experiments/repo_cchess/
 
+# --- Not part of the public code-only release (kept locally only) ---
+# Internal planning / status docs (some contain non-public strategy)
+IDEAS.md
+ROADMAP.md
+PENDING.md
+# Paper sources, drafts and submission artifacts (manuscript distributed via publisher)
+paper/
+# Paper 3 (unpublished) engine-integration experiments
+paper3_experiments/
+# Regenerable evaluation output figures
+evaluation/results_*/
+# Stray symlink to external data
+lichess_data
+

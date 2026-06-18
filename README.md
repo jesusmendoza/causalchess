@@ -9,9 +9,9 @@ The resulting embedding linearly decodes strategic concepts (castling, turn,
 material), identifies player style, supports interpretable latent arithmetic,
 and predicts player Elo — all from frozen features.
 
-> Companion paper (Paper 1): `paper/CausalChess_Paper1_IEEE_EN.tex`
-> (target venue: IEEE Transactions on Games). Status and remaining
-> pre-submission tasks: `PENDING.md`.
+> This repository contains the code to reproduce the companion paper, currently
+> under review. It is a code-only release; the manuscript is distributed through
+> the publisher.
 
 ---
 
@@ -37,7 +37,7 @@ tournaments (not for training or the core embedding analyses).
 | Autoencoder (baseline) | `models/ae_cnn.pt` | — | reconstruction |
 | SimCLR-flip (baseline) | `models/simclr_cnn_final.pt` | — | contrastive (color-flip) |
 
-Trained on Lichess 2023 standard rated games (both players ≥ 2400 Elo).
+Trained on Lichess standard rated games from June–August 2023 (both players ≥ 2400 Elo).
 Out-of-distribution validation is sealed on December 2024 games.
 
 ---
@@ -78,19 +78,7 @@ for the catalogue, runtimes, and `--ckpt` flags).
 
 ```bash
 bash evaluation/run_all.sh
-python3 evaluation/build_comparison_table.py   # regenerates paper/tables/comparison.md
-```
-
----
-
-## Build the paper
-
-```bash
-cd paper
-pdflatex CausalChess_Paper1_IEEE_EN
-bibtex   CausalChess_Paper1_IEEE_EN
-pdflatex CausalChess_Paper1_IEEE_EN
-pdflatex CausalChess_Paper1_IEEE_EN
+python3 evaluation/build_comparison_table.py   # regenerates the results comparison table
 ```
 
 ---
@@ -101,11 +89,7 @@ pdflatex CausalChess_Paper1_IEEE_EN
 .                      training / data / Bayes-ceiling scripts (root)
 prev_move_models.py    network architectures (MLP, CNN-ResNet, LSTM, Transformer, dual-head)
 prev_move_train.py     PMP training entry point
-evaluation/            paper evaluation suite (probes, style, arithmetic, Elo, trajectories)
-paper/                 LaTeX manuscript, figures, bibliography, results tables
-paper3_experiments/    engine-integration experiments (NNUECC over Stockfish NNUE)
-ROADMAP.md / IDEAS.md  project plan and future directions
-PENDING.md             honest status + IEEE CoG pre-submission checklist
+evaluation/            evaluation suite (probes, style, arithmetic, Elo, trajectories)
 ```
 
 Datasets, model checkpoints and logs are not version-controlled (see
@@ -113,6 +97,4 @@ Datasets, model checkpoints and logs are not version-controlled (see
 
 ---
 
-## Author
-
-Jesús Armando Mendoza Ramos — Path-Data / CreAI — armando@path-data.com
+<!-- Author information withheld for double-anonymous review. -->
