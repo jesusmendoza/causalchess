@@ -93,7 +93,7 @@ def main():
         for i, c in enumerate(CONCEPTS):
             M[i, j] = data.get(c, np.nan)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(9, 6.5))
     # diverging scale centered at 0
     vmax = np.nanmax(np.abs(M))
     im = ax.imshow(M, cmap="RdBu_r", vmin=-vmax, vmax=vmax, aspect="auto")
@@ -105,20 +105,22 @@ def main():
             if np.isfinite(v):
                 color = "white" if abs(v) > vmax * 0.6 else "black"
                 ax.text(j, i, f"{v:+.1f}", ha="center", va="center",
-                        color=color, fontsize=9)
+                        color=color, fontsize=12)
 
     ax.set_xticks(range(len(MODELS)))
-    ax.set_xticklabels([m[0] for m in MODELS])
+    ax.set_xticklabels([m[0] for m in MODELS], fontsize=12)
     ax.set_yticks(range(len(CONCEPTS)))
-    ax.set_yticklabels([CONCEPT_LABELS[c] for c in CONCEPTS])
+    ax.set_yticklabels([CONCEPT_LABELS[c] for c in CONCEPTS], fontsize=12)
     ax.set_title("Probe lift over untrained control (pp for cls, R²×100 for reg)\n"
                  "Red = trained model encodes concept; blue = information discarded",
-                 fontsize=11)
-    fig.colorbar(im, ax=ax, label="lift over untrained")
+                 fontsize=13)
+    cbar = fig.colorbar(im, ax=ax)
+    cbar.set_label("lift over untrained", fontsize=12)
+    cbar.ax.tick_params(labelsize=11)
     plt.tight_layout()
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    plt.savefig(args.output, dpi=140, bbox_inches="tight")
+    plt.savefig(args.output, dpi=160, bbox_inches="tight")
     print(f"Saved {args.output}")
 
 

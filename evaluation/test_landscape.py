@@ -86,11 +86,14 @@ def embed_fens(model, fens, batch=1024):
 def game_embeddings(model, moves_uci):
     board = chess.Board()
     fens = [board.fen()]
-    for m in moves_uci:
+    for i, m in enumerate(moves_uci):
         try:
             board.push_uci(m)
-        except Exception:
-            break
+        except Exception as exc:
+            raise ValueError(
+                f"illegal move {m!r} at ply {i + 1} (move {i // 2 + 1}"
+                f"{'.' if i % 2 == 0 else '...'}) after {i} accepted moves: {exc}"
+            ) from exc
         fens.append(board.fen())
     return embed_fens(model, fens), fens
 
@@ -127,9 +130,9 @@ def main():
             "g1e2", "b8d7", "e3h6", "g7h6", "d2h6", "c8b7",
             "a2a3", "e7e5", "e1c1", "d8e7", "c1b1", "a7a6",
             "e2c1", "e8c8", "c1b3", "e5d4", "d1d4", "c6c5",
-            "d4d1", "d7b6", "g2g3", "c8b8", "c3a5", "b7a8",
+            "d4d1", "d7b6", "g2g3", "c8b8", "b3a5", "b7a8",
             "f1h3", "d6d5", "h6f4", "b8a7", "h1e1", "d5d4",
-            "a5d5", "b6d5", "e4d5", "e7d6", "d1d4", "c5d4",
+            "c3d5", "b6d5", "e4d5", "e7d6", "d1d4", "c5d4",
             "e1e7", "a7b6", "f4d4", "b6a5", "b2b4", "a5a4",
             "d4c3", "d6d5", "e7a7", "a8b7", "a7b7", "d5c4",
             "c3f6", "a4a3", "f6a6", "a3b4", "c2c3", "b4c3",
@@ -138,7 +141,7 @@ def main():
         "Scholar's Mate": ([
             "e2e4", "e7e5", "f1c4", "b8c6", "d1h5", "g8f6", "h5f7",
         ], "black"),
-        "Steinitz-Rock 1873": ([
+        "Morphy's Opera Game 1858": ([
             "e2e4", "e7e5", "g1f3", "d7d6", "d2d4", "c8g4",
             "d4e5", "g4f3", "d1f3", "d6e5", "f1c4", "g8f6",
             "f3b3", "d8e7", "b1c3", "c7c6", "c1g5", "b7b5",
@@ -178,7 +181,7 @@ def main():
 
     # Build plot grid: 1 row of 3 (or 2 if no umap), 2 columns (phase, pieces)
     n_methods = len(projections)
-    fig, axes = plt.subplots(n_methods, 2, figsize=(14, 5 * n_methods))
+    fig, axes = plt.subplots(n_methods, 2, figsize=(13, 4.2 * n_methods))
     if n_methods == 1:
         axes = axes.reshape(1, -1)
 
@@ -219,9 +222,11 @@ def main():
                        edgecolors="black")  # start
             ax.scatter(pts_2d[-1, 0], pts_2d[-1, 1],
                        c="black", s=60, marker="x", zorder=5)  # end
-        ax.legend(fontsize=7, loc="best")
-        ax.set_title(f"{method_name}: 5000 positions colored by game phase\n"
-                     f"(green square=game start, black X=game end)")
+        ax.legend(fontsize=14, loc="best")
+        ax.set_title(f"{method_name}: game phase\n"
+                     f"(green square = start; black X = end)",
+                     fontsize=18)
+        ax.tick_params(labelsize=16)
         ax.grid(True, alpha=0.3)
 
         # Subplot 2: colored by piece count
@@ -229,15 +234,18 @@ def main():
         sc = ax.scatter(sample_2d[:, 0], sample_2d[:, 1],
                         c=piece_counts, cmap="viridis",
                         s=6, alpha=0.6)
-        plt.colorbar(sc, ax=ax, label="piece count (2-32)")
+        cbar = plt.colorbar(sc, ax=ax)
+        cbar.set_label("piece count (2-32)", fontsize=16)
+        cbar.ax.tick_params(labelsize=16)
         for name, (pts_2d, color) in traj_2d_per_game.items():
             ax.plot(pts_2d[:, 0], pts_2d[:, 1], '-',
                     color=color, linewidth=1.5, alpha=0.7)
-        ax.set_title(f"{method_name}: colored by piece count")
+        ax.set_title(f"{method_name}: piece count", fontsize=18)
+        ax.tick_params(labelsize=16)
         ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    plt.savefig("paper/figures/test_landscape.png", dpi=100, bbox_inches="tight")
+    plt.savefig("paper/figures/test_landscape.png", dpi=140, bbox_inches="tight")
     print("Saved test_landscape.png")
 
 

@@ -93,14 +93,55 @@ def embed_batch(model, fens, batch=1024):
     return np.vstack(out)
 
 
+def top5_acc(clf, X_val, y_val):
+    probs = clf.predict_proba(X_val)
+    # classes_ may be a subset; map labels to columns
+    class_to_col = {c: i for i, c in enumerate(clf.classes_)}
+    hits = []
+    for i in range(len(y_val)):
+        row = probs[i]
+        top = np.argsort(row)[-5:]
+        top_labels = [clf.classes_[j] for j in top]
+        hits.append(y_val[i] in top_labels)
+    return float(np.mean(hits))
+
+
+def fit_once(emb_t, emb_u, labels, seed, top_k):
+    X_tr_t, X_val_t, y_tr, y_val = train_test_split(
+        emb_t, labels, test_size=0.2, random_state=seed, stratify=None)
+    X_tr_u, X_val_u, _, _ = train_test_split(
+        emb_u, labels, test_size=0.2, random_state=seed, stratify=None)
+
+    clf_t = LogisticRegression(max_iter=1000, verbose=0)
+    clf_t.fit(X_tr_t, y_tr)
+    acc_t = accuracy_score(y_val, clf_t.predict(X_val_t))
+    t5_t = top5_acc(clf_t, X_val_t, y_val)
+
+    clf_u = LogisticRegression(max_iter=1000, verbose=0)
+    clf_u.fit(X_tr_u, y_tr)
+    acc_u = accuracy_score(y_val, clf_u.predict(X_val_u))
+    t5_u = top5_acc(clf_u, X_val_u, y_val)
+
+    majority = max(np.mean(y_val == c) for c in np.unique(y_tr))
+    return {
+        "acc_t": acc_t, "acc_u": acc_u, "t5_t": t5_t, "t5_u": t5_u,
+        "majority": majority, "random": 1.0 / top_k,
+    }
+
+
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", default="models/prev_move_cnn.pt")
+    ap.add_argument("--ckpt", default="models/prev_move_cnn_v2.pt")
     ap.add_argument("--pgn", default=PGN_PATH,
                     help="PGN file for next-move extraction (default: "
                          "lichess 2013_01). Override to point at the "
                          "SEALED validation set.")
+    ap.add_argument("--k", type=int, default=3,
+                    help="Number of probe seeds (split + linear head).")
+    ap.add_argument("--n-cap", type=int, default=50000)
+    ap.add_argument("--out", default="",
+                    help="Optional markdown path for mean±std summary.")
     args = ap.parse_args()
     ckpt_path = args.ckpt
     trained, ckpt = load_trained(ckpt_path)
@@ -126,10 +167,10 @@ def main():
     fens = [f for f, _ in filtered]
     labels = np.array([y for _, y in filtered])
 
-    # Cap to reasonable size
-    if len(fens) > 50000:
-        np.random.seed(42)
-        idx = np.random.choice(len(fens), 50000, replace=False)
+    # Cap to reasonable size (fixed subsample so seeds only vary the probe split)
+    if len(fens) > args.n_cap:
+        rng = np.random.default_rng(42)
+        idx = rng.choice(len(fens), args.n_cap, replace=False)
         fens = [fens[i] for i in idx]
         labels = labels[idx]
         print(f"  Subsampled to {len(fens)} pairs for speed")
@@ -138,38 +179,55 @@ def main():
     emb_t = embed_batch(trained, fens)
     emb_u = embed_batch(untrained, fens)
 
-    # Train-val split
-    X_tr_t, X_val_t, y_tr, y_val = train_test_split(
-        emb_t, labels, test_size=0.2, random_state=42, stratify=None)
-    X_tr_u, X_val_u, _, _ = train_test_split(
-        emb_u, labels, test_size=0.2, random_state=42, stratify=None)
+    rows = []
+    print(f"\nTraining linear heads over K={args.k} seeds...")
+    for seed in range(args.k):
+        r = fit_once(emb_t, emb_u, labels, seed, top_k)
+        rows.append(r)
+        print(f"  seed={seed}: trained={r['acc_t']*100:.2f}% / "
+              f"untrained={r['acc_u']*100:.2f}%  "
+              f"top5={r['t5_t']*100:.2f}% / {r['t5_u']*100:.2f}%")
 
-    print("Training linear heads...")
-    clf_t = LogisticRegression(max_iter=1000, verbose=0)
-    clf_t.fit(X_tr_t, y_tr)
-    acc_t = accuracy_score(y_val, clf_t.predict(X_val_t))
-    print(f"  Trained CNN + linear head:   val_acc = {acc_t*100:.2f}%")
+    def ms(key):
+        vals = np.array([r[key] for r in rows], dtype=np.float64)
+        return float(vals.mean()), float(vals.std())
 
-    clf_u = LogisticRegression(max_iter=1000, verbose=0)
-    clf_u.fit(X_tr_u, y_tr)
-    acc_u = accuracy_score(y_val, clf_u.predict(X_val_u))
-    print(f"  Untrained CNN + linear head: val_acc = {acc_u*100:.2f}%")
+    acc_t_m, acc_t_s = ms("acc_t")
+    acc_u_m, acc_u_s = ms("acc_u")
+    t5_t_m, t5_t_s = ms("t5_t")
+    t5_u_m, t5_u_s = ms("t5_u")
 
-    majority = max(np.mean(y_val == c) for c in np.unique(y_tr))
-    print(f"  Majority baseline:           {majority*100:.2f}%")
-    print(f"  Random (1/{top_k}):            {100/top_k:.3f}%")
+    print("\n" + "=" * 72)
+    print(f"  Next-move linear transfer  (K={args.k}, N={len(fens)}, top-{top_k})")
+    print("=" * 72)
+    print(f"  Random (1/{top_k}):              {100/top_k:.2f}%")
+    print(f"  Untrained + linear:   "
+          f"{acc_u_m*100:5.2f}±{acc_u_s*100:4.2f}%   "
+          f"top5 {t5_u_m*100:5.2f}±{t5_u_s*100:4.2f}%")
+    print(f"  PMP-mem + linear:     "
+          f"{acc_t_m*100:5.2f}±{acc_t_s*100:4.2f}%   "
+          f"top5 {t5_t_m*100:5.2f}±{t5_t_s*100:4.2f}%")
+    print(f"  Lift (trained−untrained): {(acc_t_m - acc_u_m)*100:+.2f} pp")
+    print("=" * 72)
 
-    # Top-5 accuracy
-    probs_t = clf_t.predict_proba(X_val_t)
-    top5_t = np.mean([y_val[i] in np.argsort(probs_t[i])[-5:] for i in range(len(y_val))])
-    probs_u = clf_u.predict_proba(X_val_u)
-    top5_u = np.mean([y_val[i] in np.argsort(probs_u[i])[-5:] for i in range(len(y_val))])
-    print(f"\n  Top-5 accuracy:")
-    print(f"    Trained:   {top5_t*100:.2f}%")
-    print(f"    Untrained: {top5_u*100:.2f}%")
-
-    print(f"\n### Summary: {'✓ TRANSFERABLE' if (acc_t - acc_u) > 0.02 else '✗ no transfer'} ###")
-    print(f"  Lift (trained − untrained): {(acc_t - acc_u)*100:+.2f}%")
+    if args.out:
+        out_dir = _os.path.dirname(args.out)
+        if out_dir:
+            _os.makedirs(out_dir, exist_ok=True)
+        with open(args.out, "w") as f:
+            f.write("# H2.1 — Next-move linear transfer (multi-seed)\n\n")
+            f.write(f"ckpt=`{ckpt_path}`, K={args.k}, N={len(fens)}, "
+                    f"top-{top_k}, pgn=`{args.pgn}`\n\n")
+            f.write("| Condition | Top-1 Acc | Top-5 Acc |\n")
+            f.write("|-----------|-----------|-----------|\n")
+            f.write(f"| Random Guess | {100/top_k:.2f}% | {500/top_k:.2f}% |\n")
+            f.write(f"| Untrained CNN + Linear Head | "
+                    f"{acc_u_m*100:.2f}±{acc_u_s*100:.2f}% | "
+                    f"{t5_u_m*100:.2f}±{t5_u_s*100:.2f}% |\n")
+            f.write(f"| PMP-mem + Linear Head | "
+                    f"**{acc_t_m*100:.2f}±{acc_t_s*100:.2f}%** | "
+                    f"**{t5_t_m*100:.2f}±{t5_t_s*100:.2f}%** |\n")
+        print(f"Wrote {args.out}")
 
 
 if __name__ == "__main__":

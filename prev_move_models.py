@@ -322,8 +322,13 @@ MODELS = {
     'simclr': CNNNet,  # same encoder; projection head is external (training only)
 }
 
-def create_model(arch, n_moves, embed_dim=256):
+def create_model(arch, n_moves, embed_dim=256, **kwargs):
     cls = MODELS.get(arch)
     if cls is None:
         raise ValueError(f"Unknown arch {arch!r}. Available: {list(MODELS.keys())}")
+    # AttentionNet accepts optional n_heads / n_layers / d_model for capacity matching
+    if arch == "attention":
+        attn_kw = {k: kwargs[k] for k in ("n_heads", "n_layers", "d_model")
+                   if k in kwargs and kwargs[k] is not None}
+        return cls(n_moves, embed_dim=embed_dim, **attn_kw)
     return cls(n_moves, embed_dim=embed_dim)

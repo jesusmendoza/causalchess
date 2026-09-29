@@ -31,16 +31,22 @@ GAMES = {
         "d1d2", "c7c6", "f2f3", "b7b5", "g1e2", "b8d7", "e3h6", "g7h6",
         "d2h6", "c8b7", "a2a3", "e7e5", "e1c1", "d8e7", "c1b1", "a7a6",
         "e2c1", "e8c8", "c1b3", "e5d4", "d1d4", "c6c5", "d4d1", "d7b6",
-        "g2g3", "c8b8", "c3a5", "b7a8",
+        "g2g3", "c8b8", "b3a5", "b7a8", "f1h3", "d6d5", "h6f4", "b8a7",
+        "h1e1", "d5d4", "c3d5", "b6d5", "e4d5", "e7d6", "d1d4", "c5d4",
+        "e1e7", "a7b6", "f4d4", "b6a5", "b2b4", "a5a4", "d4c3", "d6d5",
+        "e7a7", "a8b7", "a7b7", "d5c4", "c3f6", "a4a3", "f6a6", "a3b4",
+        "c2c3", "b4c3", "a6a1", "c3d2", "a1b2",
     ],
     "Scholar's Mate": [
         "e2e4", "e7e5", "f1c4", "b8c6", "d1h5", "g8f6", "h5f7",
     ],
-    "Steinitz-Rock 1873": [
-        "e2e4", "e7e5", "g1f3", "b8c6", "f1b5", "a7a6", "b5a4", "g8f6",
-        "d2d3", "d7d6", "c2c3", "c8g4", "b1d2", "f8e7", "h2h3", "g4h5",
-        "f3h4", "h5d1", "e1d1", "e8g8", "h4f5", "e7f6", "c1g5", "f6g5",
-        "d2f3", "g5f6", "f3h2", "f6h4", "h2g4", "f6h4", "g4f6",
+    "Morphy's Opera Game 1858": [
+        "e2e4", "e7e5", "g1f3", "d7d6", "d2d4", "c8g4",
+        "d4e5", "g4f3", "d1f3", "d6e5", "f1c4", "g8f6",
+        "f3b3", "d8e7", "b1c3", "c7c6", "c1g5", "b7b5",
+        "c3b5", "c6b5", "c4b5", "b8d7", "e1c1", "a8d8",
+        "d1d7", "d8d7", "h1d1", "e7e6", "b5d7", "f6d7",
+        "b3b8", "d7b8", "d1d8",
     ],
 }
 
@@ -57,11 +63,14 @@ def load_model(path):
 def game_fens(uci_moves):
     board = chess.Board()
     fens = [board.fen()]
-    for u in uci_moves:
+    for i, u in enumerate(uci_moves):
         try:
             board.push_uci(u)
-        except Exception:
-            break
+        except Exception as exc:
+            raise ValueError(
+                f"illegal move {u!r} at ply {i + 1} (move {i // 2 + 1}"
+                f"{'.' if i % 2 == 0 else '...'}) after {i} accepted moves: {exc}"
+            ) from exc
         fens.append(board.fen())
     return fens
 
@@ -80,12 +89,13 @@ def consec_dists(emb):
 
 def plot_panel(ax, dists, title, color):
     xs = np.arange(1, len(dists) + 1)
-    ax.plot(xs, dists, color=color, lw=1.5, marker="o", markersize=3)
-    ax.axhline(dists.mean(), linestyle="--", color="grey", lw=0.8, alpha=0.8)
+    ax.plot(xs, dists, color=color, lw=2.0, marker="o", markersize=4)
+    ax.axhline(dists.mean(), linestyle="--", color="grey", lw=1.0, alpha=0.8)
     ax.set_title(f"{title}\nmean={dists.mean():.1f}  std={dists.std():.1f}",
-                 fontsize=10)
-    ax.set_xlabel("move index", fontsize=9)
-    ax.set_ylabel("||emb(t+1) - emb(t)||", fontsize=9)
+                 fontsize=12)
+    ax.set_xlabel("move index", fontsize=11)
+    ax.set_ylabel("||emb(t+1) - emb(t)||", fontsize=11)
+    ax.tick_params(labelsize=10)
     ax.grid(True, alpha=0.3)
 
 
@@ -103,7 +113,7 @@ def main():
     nomem, nomem_acc = load_model(args.nomem)
     print(f"  val_acc={nomem_acc:.2f}%")
 
-    fig, axes = plt.subplots(len(GAMES), 2, figsize=(12, 2.5 * len(GAMES)))
+    fig, axes = plt.subplots(len(GAMES), 2, figsize=(13, 3.0 * len(GAMES)))
     axes = np.atleast_2d(axes)
 
     # For consistent y-axis across both columns of each row
@@ -128,11 +138,11 @@ def main():
         axes[i, 1].set_ylim(0, ymax)
 
     plt.suptitle("Consecutive-position embedding distances\nmem vs no-mem comparison",
-                 fontsize=12, fontweight="bold")
-    plt.tight_layout(rect=[0, 0, 1, 0.97])
+                 fontsize=14, fontweight="bold")
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
 
     os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    plt.savefig(args.output, dpi=140, bbox_inches="tight")
+    plt.savefig(args.output, dpi=160, bbox_inches="tight")
     print(f"Saved {args.output}")
 
 

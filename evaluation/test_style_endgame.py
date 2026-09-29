@@ -4,17 +4,17 @@ _PARENT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 _sys.path.insert(0, _PARENT)
 _os.chdir(_PARENT)
 """
-test_style_endgame.py — Hardest style detection: endgame-only, material-balanced.
+test_style_endgame.py — endgame-only position-split diagnostic.
 
-Ruling OUT the "cheating with opening" hypothesis.
+Position-level split diagnostic; filtering openings does not rule out
+within-game leakage. Use test_style_game_split.py for game-held-out evidence.
 
 Filters:
   - MIN_PLY >= 50 (well past opening)
   - Piece count <= 20 (simpler position, less material signal)
   - |material balance| <= 2 pawns (no blowout games)
 
-If the embedding STILL identifies player at >random in these positions,
-the style signal is REAL (not opening memorization).
+Above-chance position-split accuracy alone does not establish style.
 """
 import warnings
 warnings.filterwarnings("ignore")
@@ -182,7 +182,7 @@ def main():
         row = ' '.join(f'{cm[i,j]*100:>7.1f}%' for j in range(len(PLAYERS)))
         print(f"  {p[:10]:<10} {row}")
 
-    print(f"\n{'✓ STYLE IS REAL (not opening)' if (acc_t - acc_u) > 0.03 else '✗ style collapses in endgame'}")
+    print("\nPosition-split diagnostic only; use test_style_game_split.py for unseen games.")
 
     # Comparison with all-phase (from prev test)
     print("\nReference: all-phase trained = 47.4% (paper baseline)")

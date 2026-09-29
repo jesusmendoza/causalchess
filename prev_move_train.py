@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """
-prev_move_train.py — Train previous-move prediction with selectable architecture.
+prev_move_train.py — Train move-direction classifiers with shared CNN/MLP/etc.
 
-Supports: mlp, attention, lstm.
+Tasks (symbiotic):
+  prev_move  — Previous-Move Pretraining (PMP / CausalChess)
+  next_move  — Next-move baseline (same architecture, flipped label)
 
 Usage:
-    python3 prev_move_train.py --arch mlp --data lichess_data/prev_move_2400.tsv --epochs 20
-    python3 prev_move_train.py --arch attention --data lichess_data/prev_move_2400.tsv --epochs 20
-    python3 prev_move_train.py --arch lstm --data lichess_data/prev_move_2400.tsv --epochs 20
+    # PMP (original)
+    python3 prev_move_train.py --arch cnn --bin-dir data --output models/prev_move_cnn_v2.pt
+
+    # Next-move baseline (after prepare_move_bin.py --move-col next_move --outdir data_next)
+    python3 prev_move_train.py --arch cnn --task next_move --bin-dir data_next \\
+        --output models/next_move_cnn.pt --epochs 100 --patience 5
 """
 import argparse
 import csv
@@ -20,6 +25,22 @@ from torch.utils.data import Dataset, DataLoader
 from prev_move_models import create_model, MODELS
 
 
+TASK_DEFAULTS = {
+    "prev_move": {
+        "data": "lichess_data/prev_move_2400.tsv",
+        "move_col": "prev_move",
+        "bin_dir": "data",
+        "output": "models/prev_move_{arch}.pt",
+    },
+    "next_move": {
+        "data": "lichess_data/next_move_2400.tsv",
+        "move_col": "next_move",
+        "bin_dir": "data_next",
+        "output": "models/next_move_{arch}.pt",
+    },
+}
+
+
 def uci_to_squares(uci: str):
     """Convert UCI move (e.g. 'e2e4') to (from_sq_idx, to_sq_idx) 0-63."""
     files = 'abcdefgh'
@@ -28,12 +49,12 @@ def uci_to_squares(uci: str):
     return from_sq, to_sq
 
 
-def build_move_vocab(tsv_path, max_rows=0):
+def build_move_vocab(tsv_path, move_col="prev_move", max_rows=0):
     moves = set()
     with open(tsv_path) as f:
         reader = csv.DictReader(f, delimiter='\t')
         for i, row in enumerate(reader):
-            moves.add(row['prev_move'])
+            moves.add(row[move_col])
             if max_rows > 0 and i >= max_rows:
                 break
     return {m: i for i, m in enumerate(sorted(moves))}
@@ -59,14 +80,15 @@ def fen_to_bitboards(fen: str) -> np.ndarray:
     return bits
 
 
-class PrevMoveDataset(Dataset):
-    def __init__(self, tsv_path, move_vocab, max_rows=0):
+class MoveDataset(Dataset):
+    """TSV dataset for prev_move or next_move (column selectable)."""
+    def __init__(self, tsv_path, move_vocab, move_col="prev_move", max_rows=0):
         self.data = []  # (fen, move_idx, from_sq, to_sq)
         n_unknown = 0
         with open(tsv_path) as f:
             reader = csv.DictReader(f, delimiter='\t')
             for i, row in enumerate(reader):
-                move = row['prev_move']
+                move = row[move_col]
                 if move not in move_vocab:
                     n_unknown += 1
                     continue
@@ -80,7 +102,8 @@ class PrevMoveDataset(Dataset):
                     break
         if n_unknown > 0:
             print(f"  Warning: {n_unknown} unknown moves skipped")
-        print(f"  Dataset: {len(self.data)} samples, {len(move_vocab)} classes")
+        print(f"  Dataset: {len(self.data)} samples, {len(move_vocab)} classes "
+              f"(label={move_col})")
 
     def __len__(self):
         return len(self.data)
@@ -88,6 +111,10 @@ class PrevMoveDataset(Dataset):
     def __getitem__(self, idx):
         fen, label, from_sq, to_sq = self.data[idx]
         return torch.from_numpy(fen_to_bitboards(fen)), label, from_sq, to_sq
+
+
+# Alias for back-compat
+PrevMoveDataset = MoveDataset
 
 
 class BinaryPrevMoveDataset(Dataset):
@@ -191,6 +218,7 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
     print(f"Architecture: {args.arch}")
+    print(f"Task: {args.task} (label column={args.move_col})")
 
     if args.bin_dir:
         suffix = "_dedup" if args.dedup else ""
@@ -200,9 +228,13 @@ def train(args):
         n_moves = ds.n_moves
         # Save vocab info from binary for compatibility
         vocab = {ds.idx_to_move[i]: i for i in range(n_moves)}
+        if args.max_samples > 0 and len(ds) > args.max_samples:
+            print(f"  Truncating binary dataset to first {args.max_samples:,} samples "
+                  f"(screening subset)")
+            ds = torch.utils.data.Subset(ds, range(args.max_samples))
     else:
         print("Building vocab...")
-        vocab = build_move_vocab(args.data)
+        vocab = build_move_vocab(args.data, move_col=args.move_col)
         n_moves = len(vocab)
         print(f"  {n_moves} moves")
 
@@ -212,7 +244,8 @@ def train(args):
                 f.write(f"{m}\t{i}\n")
 
         print("Loading data...")
-        ds = PrevMoveDataset(args.data, vocab, max_rows=args.max_samples)
+        ds = MoveDataset(args.data, vocab, move_col=args.move_col,
+                         max_rows=args.max_samples)
     n = len(ds)
     n_val = max(1, n // 10)
     # Sequential split: first 90% train, last 10% val.
@@ -228,7 +261,17 @@ def train(args):
                         persistent_workers=args.num_workers > 0)
     print(f"  Train: {n - n_val}, Val: {n_val}")
 
-    model = create_model(args.arch, n_moves, embed_dim=args.embed_dim).to(device)
+    model_kw = {}
+    if args.arch == "attention":
+        if args.attn_d_model is not None:
+            model_kw["d_model"] = args.attn_d_model
+        if args.attn_layers is not None:
+            model_kw["n_layers"] = args.attn_layers
+        if args.attn_heads is not None:
+            model_kw["n_heads"] = args.attn_heads
+        if model_kw:
+            print(f"  Attention overrides: {model_kw}")
+    model = create_model(args.arch, n_moves, embed_dim=args.embed_dim, **model_kw).to(device)
     total_params = sum(p.numel() for p in model.parameters())
     print(f"  Model: {total_params:,} params")
 
@@ -287,6 +330,8 @@ def train(args):
 
             optimizer.zero_grad()
             loss.backward()
+            if getattr(args, "grad_clip", 0) and args.grad_clip > 0:
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
             optimizer.step()
             train_loss += loss.item() * x.size(0)
             train_total += x.size(0)
@@ -334,10 +379,13 @@ def train(args):
             torch.save({
                 'model': model.state_dict(),
                 'arch': args.arch,
+                'task': args.task,
+                'move_col': args.move_col,
                 'vocab': vocab,
                 'embed_dim': args.embed_dim,
                 'n_moves': n_moves,
                 'val_acc': val_acc,
+                'attn_cfg': model_kw if args.arch == "attention" else {},
             }, args.output)
             print(f"    ★ Best ({val_acc:.1f}%)")
         else:
@@ -355,6 +403,8 @@ def train(args):
             'epoch': epoch,
             'best_val_acc': best_val_acc,
             'arch': args.arch,
+            'task': args.task,
+            'move_col': args.move_col,
             'vocab': vocab,
             'embed_dim': args.embed_dim,
             'n_moves': n_moves,
@@ -369,8 +419,13 @@ def train(args):
 
 def main():
     ap = argparse.ArgumentParser()
+    ap.add_argument("--task", choices=list(TASK_DEFAULTS.keys()), default="prev_move",
+                    help="prev_move = PMP; next_move = next-move baseline (same CNN)")
     ap.add_argument("--arch", choices=list(MODELS.keys()), default="mlp")
-    ap.add_argument("--data", default="lichess_data/prev_move_2400.tsv")
+    ap.add_argument("--data", default="",
+                    help="TSV path (default depends on --task)")
+    ap.add_argument("--move-col", default="",
+                    help="Label column: prev_move or next_move (default from --task)")
     ap.add_argument("--output", default="")
     ap.add_argument("--epochs", type=int, default=20)
     ap.add_argument("--batch-size", type=int, default=4096)
@@ -389,10 +444,33 @@ def main():
                     help="Use deduplicated dataset (chess_x_dedup.bin / chess_y_dedup.bin / "
                          "chess_meta_dedup.txt). Trains CausalChess-no-mem. "
                          "Requires prepare_dedup_dataset.py to have been run first.")
+    ap.add_argument("--attn-d-model", type=int, default=None,
+                    help="AttentionNet d_model (default 64). Use 192 for ~2.3M-param match.")
+    ap.add_argument("--attn-layers", type=int, default=None,
+                    help="AttentionNet n_layers (default 3). Use 4 for ~2.3M-param match.")
+    ap.add_argument("--attn-heads", type=int, default=None,
+                    help="AttentionNet n_heads (default 4).")
+    ap.add_argument("--grad-clip", type=float, default=0.0,
+                    help="If >0, clip grad norm to this value (useful for transformers).")
     args = ap.parse_args()
+
+    defaults = TASK_DEFAULTS[args.task]
+    if not args.move_col:
+        args.move_col = defaults["move_col"]
+    if not args.data:
+        args.data = defaults["data"]
+    if not args.bin_dir and args.task == "next_move":
+        # Prefer binary if present; else TSV path remains for --data
+        if os.path.isdir(defaults["bin_dir"]) and os.path.isfile(
+            os.path.join(defaults["bin_dir"], "chess_meta.txt")
+        ):
+            args.bin_dir = defaults["bin_dir"]
     if not args.output:
         tag = "_dedup" if args.dedup else ""
-        args.output = f"models/prev_move_{args.arch}{tag}.pt"
+        if args.task == "next_move":
+            args.output = f"models/next_move_{args.arch}{tag}.pt"
+        else:
+            args.output = f"models/prev_move_{args.arch}{tag}.pt"
     os.makedirs("models", exist_ok=True)
     train(args)
 

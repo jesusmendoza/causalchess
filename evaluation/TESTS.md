@@ -65,7 +65,7 @@ Todos los tests aceptan `--ckpt <ruta.pt>` y están diseñados para correr contr
 **Tiempo:** ~1 min GPU + tSNE CPU (~5 min).
 
 ### C2. `test_trajectories.py` — suavidad de partidas
-**Qué mide:** traza partidas completas (Kasparov-Topalov, Scholar's Mate, Steinitz) como caminos en el espacio. Mide distancia consecutiva (suavidad) y distancia al inicio (progresión).
+**Qué mide:** traza partidas completas (Kasparov-Topalov, Scholar's Mate, Morphy's Opera Game) como caminos en el espacio. Mide distancia consecutiva (suavidad) y distancia al inicio (progresión).
 **Output clave:** tabla de estadísticas por partida + figura.
 **Tiempo:** ~10 seg GPU.
 
@@ -99,15 +99,19 @@ Todos los tests aceptan `--ckpt <ruta.pt>` y están diseñados para correr contr
 ## E. Estilo — ¿reconoce al jugador?
 
 ### E1. `test_style.py` — clasificación de 4 GMs
-**Qué mide:** dada una posición, ¿quién la jugó? Probe lineal sobre 4 GMs (Carlsen, Nakamura, Sarin, Firouzja). 25% es azar.
+**Qué mide:** dada una posición, ¿quién la jugó? Probe lineal sobre 4 GMs (Carlsen, Tang, Sarin, Blübaum). 25% es azar.
 **Output clave:** accuracy + matriz de confusión.
 **Datos:** `data_style/gm_games.pgn` (GM games).
 **Tiempo:** ~1 min GPU.
 
 ### E2. `test_style_endgame.py` — estilo solo en finales
-**Qué mide:** lo mismo pero filtrado a finales (pieces<20, mate_diff<2). Elimina la posibilidad de que sea memorización de aperturas.
-**Output clave:** si funciona en finales, el estilo es estructura real, no teoría.
+**Qué mide:** diagnóstico con posiciones de finales balanceados (pieces<=20, mate_diff<=2). La partición por posición comparte partidas entre entrenamiento y validación.
+**Output clave:** su exactitud no demuestra generalización a partidas nuevas. Para la evaluación válida, usar `test_style_game_split.py` (cinco particiones por partida; exactitud balanceada).
 **Tiempo:** ~1 min GPU.
+
+### E3. `test_style_game_split.py` — evaluación por partida
+**Qué mide:** identificación del jugador en partidas completamente nuevas, con cinco particiones 80/20 por partida y exactitud balanceada.
+**Resultado:** PMP 28.74 ± 3.24% frente a CNN sin entrenar 28.91 ± 2.24%; no se sostiene la conclusión de estilo.
 
 ---
 

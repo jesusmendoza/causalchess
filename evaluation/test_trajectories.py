@@ -44,11 +44,14 @@ def game_to_embeddings(model, moves_uci):
     """Given list of UCI moves, return embeddings for position after each move."""
     board = chess.Board()
     fens = [board.fen()]
-    for m in moves_uci:
+    for i, m in enumerate(moves_uci):
         try:
             board.push_uci(m)
-        except Exception:
-            break
+        except Exception as exc:
+            raise ValueError(
+                f"illegal move {m!r} at ply {i + 1} (move {i // 2 + 1}"
+                f"{'.' if i % 2 == 0 else '...'}) after {i} accepted moves: {exc}"
+            ) from exc
         fens.append(board.fen())
 
     # Batch embed (GPU if available)
@@ -82,9 +85,9 @@ def main():
             "g1e2", "b8d7", "e3h6", "g7h6", "d2h6", "c8b7",
             "a2a3", "e7e5", "e1c1", "d8e7", "c1b1", "a7a6",
             "e2c1", "e8c8", "c1b3", "e5d4", "d1d4", "c6c5",
-            "d4d1", "d7b6", "g2g3", "c8b8", "c3a5", "b7a8",
+            "d4d1", "d7b6", "g2g3", "c8b8", "b3a5", "b7a8",
             "f1h3", "d6d5", "h6f4", "b8a7", "h1e1", "d5d4",
-            "a5d5", "b6d5", "e4d5", "e7d6", "d1d4", "c5d4",
+            "c3d5", "b6d5", "e4d5", "e7d6", "d1d4", "c5d4",
             "e1e7", "a7b6", "f4d4", "b6a5", "b2b4", "a5a4",
             "d4c3", "d6d5", "e7a7", "a8b7", "a7b7", "d5c4",
             "c3f6", "a4a3", "f6a6", "a3b4", "c2c3", "b4c3",
@@ -94,7 +97,7 @@ def main():
             "e2e4", "e7e5", "f1c4", "b8c6", "d1h5", "g8f6",
             "h5f7",
         ],
-        "Steinitz-Rock 1873 (quick tactical)": [
+        "Morphy's Opera Game 1858": [
             "e2e4", "e7e5", "g1f3", "d7d6", "d2d4", "c8g4",
             "d4e5", "g4f3", "d1f3", "d6e5", "f1c4", "g8f6",
             "f3b3", "d8e7", "b1c3", "c7c6", "c1g5", "b7b5",

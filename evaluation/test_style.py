@@ -4,12 +4,13 @@ _PARENT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 _sys.path.insert(0, _PARENT)
 _os.chdir(_PARENT)
 """
-test_style.py — Test 5: player style detection from position.
+test_style.py — player-identification position-split diagnostic.
 
 Given a position from a GM game, can a linear probe on the CNN embedding
 identify WHICH GM played that position?
 
-If yes: the embedding captures individual playing style.
+This diagnostic uses a position-level split and cannot establish player
+style generalization to unseen games. See test_style_game_split.py.
 
 Data: data_style/gm_games.pgn (2700+ Elo games)
 Top players: penguingim1 (Andrew Tang), msb2, NihalSarin, DrNykterstein (Carlsen)
@@ -158,7 +159,7 @@ def main():
         row = ' '.join(f'{cm[i,j]*100:>7.1f}%' for j in range(len(PLAYERS)))
         print(f"  {p[:10]:<10} {row}")
 
-    print(f"\n{'✓ STYLE DETECTED' if (acc_t - acc_u) > 0.05 else '✗ no style signal'}")
+    print("\nPosition-split diagnostic only; use test_style_game_split.py for unseen games.")
 
 
 if __name__ == "__main__":

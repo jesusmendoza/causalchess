@@ -20,6 +20,7 @@ lichess_data/
 data/
 data_elo/
 data_style/
+data_next/
 logs/
 models/
 
