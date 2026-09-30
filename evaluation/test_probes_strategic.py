@@ -73,6 +73,7 @@ def label_phase(fen):
 
 
 def label_castled_white(fen):
+    """King on c1/g1 with no castling rights; a board-configuration proxy."""
     board = chess.Board(fen)
     wk = board.king(chess.WHITE)
     can = (board.has_kingside_castling_rights(chess.WHITE)
@@ -81,6 +82,7 @@ def label_castled_white(fen):
 
 
 def label_castled_black(fen):
+    """King on c8/g8 with no castling rights; a board-configuration proxy."""
     board = chess.Board(fen)
     bk = board.king(chess.BLACK)
     can = (board.has_kingside_castling_rights(chess.BLACK)

@@ -9,12 +9,11 @@ test_landscape.py — chess embedding "universe" visualization.
 Sample 5000 positions from the corpus, project to 2D (UMAP + t-SNE + PCA),
 color by game phase / material. Overlay 3 real game trajectories.
 
-If the embedding captures structure:
-- Openings, middlegames, and endgames should form distinguishable regions
-- Individual games should trace smooth paths through the space
+The 2-D projections are descriptive views of one trained embedding space.
 """
 import os
 import sys
+import tempfile
 import torch
 import numpy as np
 import chess
@@ -27,6 +26,10 @@ from sklearn.manifold import TSNE
 from prev_move_models import create_model
 from prev_move_models import fen_to_bitboards
 from eval_arithmetic import load_corpus
+from trajectory_games import load_kasparov_topalov
+
+# Numba's packaged UMAP decorators need a writable cache in this environment.
+os.environ.setdefault("NUMBA_CACHE_DIR", os.path.join(tempfile.gettempdir(), "numba_cache_causalchess"))
 
 try:
     import umap
@@ -71,7 +74,8 @@ def fen_piece_count(fen):
 
 
 def embed_fens(model, fens, batch=1024):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # CPU inference keeps regenerated projections stable across GPU kernels.
+    device = torch.device("cpu")
     model = model.to(device)
     all_embs = []
     for i in range(0, len(fens), batch):
@@ -101,8 +105,11 @@ def game_embeddings(model, moves_uci):
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", default="models/prev_move_cnn.pt")
+    ap.add_argument("--ckpt", default="models/prev_move_cnn_v2.pt")
     args = ap.parse_args()
+    np.random.seed(42)
+    torch.manual_seed(42)
+    torch.set_num_threads(1)
     model_path = args.ckpt
     model, val_acc = load_model(model_path)
     print(f"Loaded CNN (val_acc={val_acc:.2f}%)")
@@ -111,7 +118,6 @@ def main():
     print("Loading corpus...")
     tsv = "lichess_data/prev_move_2400.tsv"
     corpus_fens = load_corpus(tsv, max_n=50000)
-    np.random.seed(42)
     sample_idx = np.random.choice(len(corpus_fens), size=5000, replace=False)
     sample_fens = [corpus_fens[i] for i in sample_idx]
 
@@ -122,25 +128,15 @@ def main():
     phases = np.array([fen_phase(f) for f in sample_fens])
     piece_counts = np.array([fen_piece_count(f) for f in sample_fens])
 
+    # K–T comes from the canonical full PGN; never maintain a second move list.
+    kasparov_uci, _, _ = load_kasparov_topalov()
+
     # Real games to overlay
     games = {
-        "Kasparov-Topalov 1999": ([
-            "e2e4", "d7d6", "d2d4", "g8f6", "b1c3", "g7g6",
-            "c1e3", "f8g7", "d1d2", "c7c6", "f2f3", "b7b5",
-            "g1e2", "b8d7", "e3h6", "g7h6", "d2h6", "c8b7",
-            "a2a3", "e7e5", "e1c1", "d8e7", "c1b1", "a7a6",
-            "e2c1", "e8c8", "c1b3", "e5d4", "d1d4", "c6c5",
-            "d4d1", "d7b6", "g2g3", "c8b8", "b3a5", "b7a8",
-            "f1h3", "d6d5", "h6f4", "b8a7", "h1e1", "d5d4",
-            "c3d5", "b6d5", "e4d5", "e7d6", "d1d4", "c5d4",
-            "e1e7", "a7b6", "f4d4", "b6a5", "b2b4", "a5a4",
-            "d4c3", "d6d5", "e7a7", "a8b7", "a7b7", "d5c4",
-            "c3f6", "a4a3", "f6a6", "a3b4", "c2c3", "b4c3",
-            "a6a1", "c3d2", "a1b2",
-        ], "red"),
+        "Kasparov–Topalov 1999 (complete, 87 plies)": (kasparov_uci, "black"),
         "Scholar's Mate": ([
             "e2e4", "e7e5", "f1c4", "b8c6", "d1h5", "g8f6", "h5f7",
-        ], "black"),
+        ], "#2f6fbd"),
         "Morphy's Opera Game 1858": ([
             "e2e4", "e7e5", "g1f3", "d7d6", "d2d4", "c8g4",
             "d4e5", "g4f3", "d1f3", "d6e5", "f1c4", "g8f6",
@@ -222,7 +218,6 @@ def main():
                        edgecolors="black")  # start
             ax.scatter(pts_2d[-1, 0], pts_2d[-1, 1],
                        c="black", s=60, marker="x", zorder=5)  # end
-        ax.legend(fontsize=14, loc="best")
         ax.set_title(f"{method_name}: game phase\n"
                      f"(green square = start; black X = end)",
                      fontsize=18)
@@ -244,7 +239,11 @@ def main():
         ax.tick_params(labelsize=16)
         ax.grid(True, alpha=0.3)
 
-    plt.tight_layout()
+    # One shared legend avoids covering the trajectories in each phase panel.
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=3,
+               bbox_to_anchor=(0.5, 1.0), fontsize=12, frameon=False)
+    plt.tight_layout(rect=(0, 0, 1, 0.955))
     plt.savefig("paper/figures/test_landscape.png", dpi=140, bbox_inches="tight")
     print("Saved test_landscape.png")
 

@@ -49,6 +49,7 @@ def label_phase(fen):
 
 
 def label_castled_white(fen):
+    """King on c1/g1 with no castling rights; does not record a castling move."""
     board = chess.Board(fen)
     wk_sq = board.king(chess.WHITE)
     can_castle = (board.has_kingside_castling_rights(chess.WHITE)
@@ -57,6 +58,7 @@ def label_castled_white(fen):
 
 
 def label_castled_black(fen):
+    """King on c8/g8 with no castling rights; does not record a castling move."""
     board = chess.Board(fen)
     bk_sq = board.king(chess.BLACK)
     can_castle = (board.has_kingside_castling_rights(chess.BLACK)

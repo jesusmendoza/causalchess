@@ -2,15 +2,10 @@
 """
 prepare_dedup_dataset.py — deduplicate (position, prev_move) binomials.
 
-The real bias of the CausalChess training set is at the (FEN_bitboards, prev_move)
-pair level, not at position or move level individually. Opening positions repeat
-thousands of times and each occurrence carries the same prev_move → pure
-memorization, no strategic learning.
-
-This script produces a new training set for CausalChess2 where each unique
-(768-bit position, prev_move) binomial appears exactly once. Used to run the
-paper-deciding ablation: if probes / style / chess algebra survive the dedup,
-learning was real; if they collapse, memorization was dominant.
+This script keeps each unique (768-bit position, previous-move label) pair once.
+It removes exact pair repetition while retaining distinct previous moves that
+lead to the same board. The ablation measures sensitivity to repeated pairs;
+it does not establish the absence of all memorization or prove generalization.
 
 Outputs (do NOT overwrite originals):
   data/chess_x_dedup.bin      N_dedup × 12 uint64
@@ -39,6 +34,11 @@ def main():
         meta = dict(line.strip().split('=') for line in f if '=' in line)
     n = int(meta['n_samples'])
     n_moves = int(meta['n_moves'])
+    if not os.path.exists(IN_PHASE):
+        raise FileNotFoundError(
+            f"{IN_PHASE} is missing. Repack the TSV with prepare_move_bin.py; "
+            "it generates the material-based phase labels used for diagnostics."
+        )
     print(f"Loading {n:,} samples from {IN_X}, {IN_Y}, {IN_PHASE}...")
 
     x = np.memmap(IN_X, dtype=np.uint64, mode='r', shape=(n, 12))

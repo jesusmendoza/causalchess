@@ -11,6 +11,7 @@ Reads per-model metrics from results_*/ directories, computes lift over
 the untrained control, and emits `paper/figures/probe_lift_heatmap.png`.
 """
 import argparse
+import json
 import os
 import re
 import numpy as np
@@ -18,10 +19,10 @@ import matplotlib.pyplot as plt
 
 
 MODELS = [
-    ("AE",              "results_ae"),
-    ("SimCLR-flip",     "results_simclr_final"),
-    ("Mem",             "results_mem_at40"),
-    ("No-mem (e1)",     "results_nomem_e1"),
+    ("AE",          "results_revision_20260930/ae"),
+    ("SimCLR",      "results_revision_20260930/simclr"),
+    ("PMP-mem",     "results_revision_20260930/pmp_mem"),
+    ("PMP-no-mem",  "results_revision_20260930/pmp_nomem"),
 ]
 
 ROOT = "evaluation"
@@ -67,12 +68,34 @@ def extract_probes(text):
     return out
 
 
+def extract_probes_json(path):
+    """Prefer unrounded per-run metrics when the provenance JSON is present."""
+    aliases = {
+        "phase (0/1/2)": "phase",
+        "white castled": "castled_W",
+        "black castled": "castled_B",
+        "turn (white/black)": "turn",
+        "in check": "in_check",
+        "material balance (W-B)": "material_bal",
+        "piece count (2-32)": "piece_count",
+        "white isolated pawns": "isolated_W",
+        "open files (0-8)": "open_files",
+    }
+    with open(path, encoding="utf-8") as stream:
+        payload = json.load(stream)
+    out = {name: np.nan for name in CONCEPTS}
+    for row in payload["metrics"]:
+        concept = aliases[row["concept"]]
+        out[concept] = float(row["lift"]) * 100
+    return out
+
+
 CONCEPTS = ["phase", "castled_W", "castled_B", "turn", "in_check",
             "material_bal", "piece_count", "isolated_W", "open_files"]
 CONCEPT_LABELS = {
     "phase": "Phase",
-    "castled_W": "Castled W",
-    "castled_B": "Castled B",
+    "castled_W": "King c/g proxy W",
+    "castled_B": "King c/g proxy B",
     "turn": "Turn",
     "in_check": "In-check",
     "material_bal": "Material bal (R²×100)",
@@ -89,9 +112,18 @@ def main():
 
     M = np.zeros((len(CONCEPTS), len(MODELS)))
     for j, (lbl, rdir) in enumerate(MODELS):
-        data = extract_probes(slurp(os.path.join(ROOT, rdir, "probes.log")))
+        json_path = os.path.join(ROOT, rdir, "probes.json")
+        if os.path.isfile(json_path):
+            data = extract_probes_json(json_path)
+        else:
+            data = extract_probes(slurp(os.path.join(ROOT, rdir, "probes.log")))
         for i, c in enumerate(CONCEPTS):
             M[i, j] = data.get(c, np.nan)
+
+    if not np.all(np.isfinite(M)):
+        missing = [(MODELS[j][0], CONCEPTS[i])
+                   for i, j in np.argwhere(~np.isfinite(M))]
+        raise ValueError(f"Missing or non-finite probe metrics: {missing}")
 
     fig, ax = plt.subplots(figsize=(9, 6.5))
     # diverging scale centered at 0
@@ -112,7 +144,7 @@ def main():
     ax.set_yticks(range(len(CONCEPTS)))
     ax.set_yticklabels([CONCEPT_LABELS[c] for c in CONCEPTS], fontsize=12)
     ax.set_title("Probe lift over untrained control (pp for cls, R²×100 for reg)\n"
-                 "Red = trained model encodes concept; blue = information discarded",
+                 "Red = higher linear readout; blue = lower linear readout",
                  fontsize=13)
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label("lift over untrained", fontsize=12)

@@ -19,6 +19,8 @@ Standard rep learning evaluation (BERT probes, CLIP probes).
 import numpy as np
 import torch
 import chess
+import json
+from pathlib import Path
 from sklearn.linear_model import LogisticRegression, Ridge
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, r2_score
@@ -29,6 +31,9 @@ from eval_arithmetic import load_corpus
 
 
 N_POSITIONS = 20000
+LOGREG_MAX_ITER = 20000
+RIDGE_SOLVER = "svd"
+PROBE_DTYPE = np.float64
 
 
 # ── Concept label extractors ─────────────────────────────
@@ -48,9 +53,9 @@ def label_phase(fen):
 
 
 def label_castled_white(fen):
-    """1 if white king has castled kingside or queenside (not on e1)."""
+    """King on c1/g1 with no castling rights: a proxy, not castling history."""
     board = chess.Board(fen)
-    # Castled = king moved from e1 to g1 or c1 AND can't castle anymore
+    # This configuration can also arise through ordinary king moves.
     wk_sq = board.king(chess.WHITE)
     can_castle = board.has_kingside_castling_rights(chess.WHITE) or \
                  board.has_queenside_castling_rights(chess.WHITE)
@@ -60,6 +65,7 @@ def label_castled_white(fen):
 
 
 def label_castled_black(fen):
+    """King on c8/g8 with no castling rights: a proxy, not castling history."""
     board = chess.Board(fen)
     bk_sq = board.king(chess.BLACK)
     can_castle = board.has_kingside_castling_rights(chess.BLACK) or \
@@ -154,17 +160,20 @@ def embed_batch(model, fens, batch=1024):
 
 def run_probe(name, emb, labels, kind, trained_flag):
     """kind: 'cls' (classification) or 'reg' (regression)"""
+    # Use the same double-precision design matrix for every checkpoint; this
+    # avoids model-dependent low-precision conditioning in the linear probes.
+    emb = np.asarray(emb, dtype=PROBE_DTYPE)
     X_train, X_val, y_train, y_val = train_test_split(
         emb, labels, test_size=0.2, random_state=42)
     if kind == 'cls':
-        clf = LogisticRegression(max_iter=1000, n_jobs=-1)
+        clf = LogisticRegression(max_iter=LOGREG_MAX_ITER, n_jobs=-1)
         clf.fit(X_train, y_train)
         acc = accuracy_score(y_val, clf.predict(X_val))
         # Majority baseline
         baseline = max(np.mean(y_val == c) for c in np.unique(y_train))
         return acc, baseline
     else:
-        clf = Ridge()
+        clf = Ridge(solver=RIDGE_SOLVER)
         clf.fit(X_train, y_train)
         r2 = r2_score(y_val, clf.predict(X_val))
         baseline = 0.0  # R² of predicting mean is 0
@@ -175,6 +184,8 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="models/prev_move_cnn.pt")
+    ap.add_argument("--json-output", default=None,
+                    help="Optional machine-readable copy of unrounded probe scores")
     args = ap.parse_args()
     ckpt_path = args.ckpt
     trained, ckpt = load_trained(ckpt_path)
@@ -210,10 +221,21 @@ def main():
     print(f"  {'Concept':<30} {'Trained':<18} {'Untrained':<18} {'Baseline':<12}")
     print("="*78)
 
+    metrics = []
     for name, _, kind in probes:
         y = labels_dict[name]
         t_score, base = run_probe(name, emb_t, y, kind, trained_flag=True)
         u_score, _ = run_probe(name, emb_u, y, kind, trained_flag=False)
+        metrics.append({
+            "concept": name,
+            "kind": kind,
+            "metric": "accuracy_fraction" if kind == "cls" else "r2",
+            "trained": float(t_score),
+            "untrained": float(u_score),
+            "baseline": float(base),
+            "lift": float(t_score - u_score),
+            "validation_n": int(len(y) * 0.2),
+        })
 
         if kind == 'cls':
             t_str = f"{t_score*100:5.1f}%"
@@ -230,6 +252,28 @@ def main():
     print("="*78)
     print("✓ = trained > untrained by >2% (embedding learned something)")
     print("cls = classification accuracy | reg = R² score (1.0 = perfect)")
+    if args.json_output:
+        payload = {
+            "checkpoint": str(Path(ckpt_path)),
+            "checkpoint_val_acc": float(ckpt.get("val_acc", 0)),
+            "n_positions": len(fens),
+            "sample_seed": 42,
+            "split_test_size": 0.2,
+            "split_random_state": 42,
+            "probe_protocol": {
+                "classifier": "sklearn LogisticRegression",
+                "classifier_max_iter": LOGREG_MAX_ITER,
+                "classifier_n_jobs": -1,
+                "regressor": "sklearn Ridge",
+                "regressor_solver": RIDGE_SOLVER,
+                "embedding_and_design_matrix_dtype": str(np.dtype(PROBE_DTYPE)),
+            },
+            "metrics": metrics,
+        }
+        output_path = Path(args.json_output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        print(f"Saved exact probe metrics to {output_path}")
 
 
 if __name__ == "__main__":

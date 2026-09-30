@@ -4,7 +4,7 @@ _PARENT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 _sys.path.insert(0, _PARENT)
 _os.chdir(_PARENT)
 """
-test_trajectories.py — Test 4: game trajectories in embedding space.
+test_trajectories.py — Single-model diagnostic of game trajectories.
 
 Hypothesis: the embedding traces smooth curves through a game
 (opening → middlegame → endgame) without discontinuities.
@@ -30,6 +30,7 @@ from sklearn.decomposition import PCA
 
 from prev_move_models import create_model
 from prev_move_models import fen_to_bitboards
+from trajectory_games import load_kasparov_topalov
 
 
 def load_model(path):
@@ -66,7 +67,7 @@ def game_to_embeddings(model, moves_uci):
 def main():
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ckpt", default="models/prev_move_cnn.pt")
+    ap.add_argument("--ckpt", default="models/prev_move_cnn_v2.pt")
     args = ap.parse_args()
     model_path = args.ckpt
     if not os.path.isfile(model_path):
@@ -77,22 +78,12 @@ def main():
     model, val_acc = load_model(model_path)
     print(f"  val_acc = {val_acc:.2f}%")
 
+    # Keep the Kasparov–Topalov trajectory tied to the one validated PGN.
+    kasparov_uci, _, _ = load_kasparov_topalov()
+
     # A handful of real games (well-known) in UCI format
     games = {
-        "Kasparov-Topalov 1999 (Kasparov's Immortal)": [
-            "e2e4", "d7d6", "d2d4", "g8f6", "b1c3", "g7g6",
-            "c1e3", "f8g7", "d1d2", "c7c6", "f2f3", "b7b5",
-            "g1e2", "b8d7", "e3h6", "g7h6", "d2h6", "c8b7",
-            "a2a3", "e7e5", "e1c1", "d8e7", "c1b1", "a7a6",
-            "e2c1", "e8c8", "c1b3", "e5d4", "d1d4", "c6c5",
-            "d4d1", "d7b6", "g2g3", "c8b8", "b3a5", "b7a8",
-            "f1h3", "d6d5", "h6f4", "b8a7", "h1e1", "d5d4",
-            "c3d5", "b6d5", "e4d5", "e7d6", "d1d4", "c5d4",
-            "e1e7", "a7b6", "f4d4", "b6a5", "b2b4", "a5a4",
-            "d4c3", "d6d5", "e7a7", "a8b7", "a7b7", "d5c4",
-            "c3f6", "a4a3", "f6a6", "a3b4", "c2c3", "b4c3",
-            "a6a1", "c3d2", "a1b2",
-        ],
+        "Kasparov-Topalov 1999 (complete game)": kasparov_uci,
         "Scholar's Mate (4-move mate)": [
             "e2e4", "e7e5", "f1c4", "b8c6", "d1h5", "g8f6",
             "h5f7",
@@ -164,7 +155,8 @@ def main():
         ax.grid(True, alpha=0.3)
 
     plt.tight_layout()
-    out = "paper/figures/test_trajectories.png"
+    # Do not overwrite the four-model paper figure generated separately.
+    out = "paper/figures/test_trajectories_single_model_diagnostic.png"
     plt.savefig(out, dpi=100, bbox_inches="tight")
     print(f"Saved {out}")
 

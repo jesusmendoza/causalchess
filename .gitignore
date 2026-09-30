@@ -17,6 +17,7 @@ lichess_data/
 *.jsonl
 *.zst
 *.pgn
+!evaluation/kasparov_topalov_1999.pgn
 data/
 data_elo/
 data_style/
@@ -65,4 +66,3 @@ eval_embeddings.py
 evaluation/test_latent_walk.py
 # Stray symlink to external data
 lichess_data
-

@@ -9,6 +9,7 @@ unchanged.
 Output (in --outdir):
   chess_x.bin      — N × 12 uint64 bitboards
   chess_y.bin      — N × uint16 move indices
+  chess_phase.bin  — N × uint8 material-based phase (0/1/2; diagnostic only)
   chess_vocab.txt  — move\\tidx
   chess_meta.txt   — n_samples, n_moves, ...
 
@@ -49,6 +50,17 @@ def fen_to_bitboards(fen: str) -> list:
     return boards
 
 
+def phase_from_bitboards(boards):
+    """Material phase: opening >=70, middlegame >=40, endgame <40.
+
+    Kings are excluded; these labels support dataset diagnostics and are not
+    the previous-move training target.
+    """
+    weights = (1, 3, 3, 5, 9, 0, 1, 3, 3, 5, 9, 0)
+    material = sum(int(bb).bit_count() * w for bb, w in zip(boards, weights))
+    return 0 if material >= 70 else 1 if material >= 40 else 2
+
+
 def pack_tsv(tsv, move_col, outdir, max_samples=0):
     os.makedirs(outdir, exist_ok=True)
 
@@ -73,14 +85,17 @@ def pack_tsv(tsv, move_col, outdir, max_samples=0):
     print("Converting to binary...")
     x_list = []
     y_list = []
+    phase_list = []
     with open(tsv) as f:
         reader = csv.DictReader(f, delimiter="\t")
         for i, row in enumerate(reader):
             move = row[move_col]
             if move not in vocab:
                 continue
-            x_list.append(fen_to_bitboards(row["fen"]))
+            boards = fen_to_bitboards(row["fen"])
+            x_list.append(boards)
             y_list.append(vocab[move])
+            phase_list.append(phase_from_bitboards(boards))
             if max_samples > 0 and len(x_list) >= max_samples:
                 break
             if (i + 1) % 500000 == 0:
@@ -92,6 +107,8 @@ def pack_tsv(tsv, move_col, outdir, max_samples=0):
     y_arr = np.array(y_list, dtype=np.uint16)
     x_arr.tofile(os.path.join(outdir, "chess_x.bin"))
     y_arr.tofile(os.path.join(outdir, "chess_y.bin"))
+    np.asarray(phase_list, dtype=np.uint8).tofile(
+        os.path.join(outdir, "chess_phase.bin"))
 
     with open(os.path.join(outdir, "chess_meta.txt"), "w") as f:
         f.write(f"n_samples={n}\n")
@@ -100,10 +117,11 @@ def pack_tsv(tsv, move_col, outdir, max_samples=0):
         f.write(f"in_bits=768\n")
         f.write(f"move_col={move_col}\n")
         f.write(f"source_tsv={tsv}\n")
+        f.write("phase_definition=material_Q9_R5_B3_N3_P1_open70_middle40\n")
 
     print(f"Wrote {outdir}/chess_x.bin ({x_arr.nbytes / 1e6:.1f} MB)")
     print(f"Wrote {outdir}/chess_y.bin ({y_arr.nbytes / 1e6:.1f} MB)")
-    print(f"Wrote {outdir}/chess_vocab.txt, {outdir}/chess_meta.txt")
+    print(f"Wrote {outdir}/chess_phase.bin, chess_vocab.txt, chess_meta.txt")
 
 
 def main(argv=None):
