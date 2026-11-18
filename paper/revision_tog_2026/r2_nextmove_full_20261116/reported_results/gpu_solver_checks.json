@@ -1,0 +1,32 @@
+[
+  {
+    "classes": 4,
+    "C": 1.0,
+    "maximum_probability_difference": 3.3221079237533147e-07,
+    "optimization": {
+      "objective": 0.5157489817094878,
+      "gradient_inf": 6.5673001590647786e-09,
+      "function_calls": 78,
+      "status": "CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH",
+      "warm_iterations": 30,
+      "final_float64_iterations": 16,
+      "dtype": "float64",
+      "backend": "SciPy L-BFGS-B / PyTorch CUDA objective"
+    }
+  },
+  {
+    "classes": 17,
+    "C": 0.1,
+    "maximum_probability_difference": 4.962576541922559e-07,
+    "optimization": {
+      "objective": 1.8283096348357533,
+      "gradient_inf": 6.8297833812069886e-09,
+      "function_calls": 53,
+      "status": "CONVERGENCE: REL_REDUCTION_OF_F_<=_FACTR*EPSMCH",
+      "warm_iterations": 24,
+      "final_float64_iterations": 11,
+      "dtype": "float64",
+      "backend": "SciPy L-BFGS-B / PyTorch CUDA objective"
+    }
+  }
+]

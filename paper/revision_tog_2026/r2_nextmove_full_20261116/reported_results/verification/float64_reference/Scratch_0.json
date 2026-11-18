@@ -1,0 +1,24 @@
+{
+  "condition": "Scratch",
+  "seed": 0,
+  "test": {
+    "top1": 0.0425,
+    "top5": 0.1178
+  },
+  "n_train": 32000,
+  "n_test": 10000,
+  "fitted_classes": 1738,
+  "iterations": [
+    354
+  ],
+  "warnings": [],
+  "seconds": 139.57988452911377,
+  "optimization": {
+    "objective": 4.278182165492395,
+    "gradient_inf": 9.703204453169465e-05,
+    "function_calls": 359,
+    "status": "CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL",
+    "dtype": "float64",
+    "backend": "SciPy L-BFGS-B / PyTorch CUDA objective"
+  }
+}

@@ -19,10 +19,10 @@ import matplotlib.pyplot as plt
 
 
 MODELS = [
-    ("AE",          "results_revision_20260930/ae"),
-    ("SimCLR",      "results_revision_20260930/simclr"),
     ("PMP-mem",     "results_revision_20260930/pmp_mem"),
     ("PMP-no-mem",  "results_revision_20260930/pmp_nomem"),
+    ("AE",          "results_revision_20260930/ae"),
+    ("SimCLR",      "results_revision_20260930/simclr"),
 ]
 
 ROOT = "evaluation"
@@ -128,7 +128,11 @@ def main():
     fig, ax = plt.subplots(figsize=(9, 6.5))
     # diverging scale centered at 0
     vmax = np.nanmax(np.abs(M))
-    im = ax.imshow(M, cmap="RdBu_r", vmin=-vmax, vmax=vmax, aspect="auto")
+    im = ax.pcolormesh(np.arange(M.shape[1] + 1) - 0.5,
+                       np.arange(M.shape[0] + 1) - 0.5, M,
+                       cmap="RdBu_r", vmin=-vmax, vmax=vmax,
+                       shading="flat", rasterized=False)
+    ax.invert_yaxis()
 
     # Text annotations
     for i in range(M.shape[0]):

@@ -1,0 +1,26 @@
+{
+  "condition": "PMP-no-mem",
+  "seed": 1,
+  "test": {
+    "top1": 0.0908,
+    "top5": 0.244
+  },
+  "n_train": 32000,
+  "n_test": 10000,
+  "fitted_classes": 1727,
+  "iterations": [
+    219
+  ],
+  "warnings": [],
+  "seconds": 19.955188989639282,
+  "optimization": {
+    "objective": 1.8495481909254878,
+    "gradient_inf": 9.85904374405782e-05,
+    "function_calls": 226,
+    "status": "CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL",
+    "warm_iterations": 219,
+    "final_float64_iterations": 0,
+    "dtype": "float64",
+    "backend": "SciPy L-BFGS-B / PyTorch CUDA objective"
+  }
+}

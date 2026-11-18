@@ -1,0 +1,26 @@
+{
+  "condition": "Ensemble",
+  "seed": 0,
+  "test": {
+    "top1": 0.0789,
+    "top5": 0.2204
+  },
+  "n_train": 32000,
+  "n_test": 10000,
+  "fitted_classes": 1738,
+  "iterations": [
+    219
+  ],
+  "warnings": [],
+  "seconds": 39.81516408920288,
+  "optimization": {
+    "objective": 0.37887906057708176,
+    "gradient_inf": 7.475165710721996e-05,
+    "function_calls": 228,
+    "status": "CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL",
+    "warm_iterations": 219,
+    "final_float64_iterations": 0,
+    "dtype": "float64",
+    "backend": "SciPy L-BFGS-B / PyTorch CUDA objective"
+  }
+}

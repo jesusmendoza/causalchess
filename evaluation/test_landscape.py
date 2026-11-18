@@ -106,6 +106,7 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--ckpt", default="models/prev_move_cnn_v2.pt")
+    ap.add_argument("--output", default="paper/figures/test_landscape.png")
     args = ap.parse_args()
     np.random.seed(42)
     torch.manual_seed(42)
@@ -244,8 +245,9 @@ def main():
     fig.legend(handles, labels, loc="upper center", ncol=3,
                bbox_to_anchor=(0.5, 1.0), fontsize=12, frameon=False)
     plt.tight_layout(rect=(0, 0, 1, 0.955))
-    plt.savefig("paper/figures/test_landscape.png", dpi=140, bbox_inches="tight")
-    print("Saved test_landscape.png")
+    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+    plt.savefig(args.output, dpi=140, bbox_inches="tight")
+    print(f"Saved {args.output}")
 
 
 if __name__ == "__main__":

@@ -77,11 +77,11 @@ def plot_panel(ax, dists, model_name, game_name, color, y_max, show_ylabel):
     ax.axhline(dists.mean(), linestyle="--", color="grey", lw=1.0, alpha=0.8)
     ax.set_title(
         f"{model_name} · {game_name}\nmean={dists.mean():.3f}; SD={dists.std():.3f}",
-        fontsize=11.5,
+        fontsize=9,
     )
-    ax.set_xlabel("Ply", fontsize=15)
-    ax.set_ylabel("Unit-L2 chord distance" if show_ylabel else "", fontsize=13)
-    ax.tick_params(labelsize=13)
+    ax.set_xlabel("Ply", fontsize=9)
+    ax.set_ylabel("Unit-L2 chord distance" if show_ylabel else "", fontsize=9)
+    ax.tick_params(labelsize=8)
     ax.set_ylim(0, y_max)
     ax.grid(True, alpha=0.3)
 
@@ -104,9 +104,9 @@ def main():
     print(f"Loading PMP-no-mem from {args.nomem}...")
     nomem, _ = load_model(args.nomem)
 
-    fig, axes = plt.subplots(len(games), 2, figsize=(7.2, 9.3), constrained_layout=True)
+    fig, axes = plt.subplots(2, len(games), figsize=(7.2, 4.4), constrained_layout=True)
     axes = np.atleast_2d(axes)
-    for row, (game_name, fens) in enumerate(games):
+    for col, (game_name, fens) in enumerate(games):
         emb_mem = embed_all(mem, fens)
         emb_nomem = embed_all(nomem, fens)
         steps = {
@@ -114,19 +114,19 @@ def main():
             "no_mem": chord_steps(emb_nomem),
         }
         ymax = max(steps["mem"].max(), steps["no_mem"].max()) * 1.12
-        plot_panel(axes[row, 0], steps["mem"], "PMP-mem", game_name,
-                   "steelblue", ymax, show_ylabel=True)
-        plot_panel(axes[row, 1], steps["no_mem"], "PMP-no-mem", game_name,
-                   "seagreen", ymax, show_ylabel=False)
+        plot_panel(axes[0, col], steps["mem"], "PMP-mem", game_name,
+                   "steelblue", ymax, show_ylabel=(col == 0))
+        plot_panel(axes[1, col], steps["no_mem"], "PMP-no-mem", game_name,
+                   "seagreen", ymax, show_ylabel=(col == 0))
 
     fig.suptitle(
         "Consecutive trajectory steps after per-position L2 normalization",
-        fontsize=14,
+        fontsize=10,
     )
     fig.text(
         0.5, -0.008,
         "Distances are unit-sphere chord lengths (0–2); curves describe individual games.",
-        ha="center", fontsize=9,
+        ha="center", fontsize=7,
     )
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)

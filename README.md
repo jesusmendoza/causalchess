@@ -65,6 +65,27 @@ The `evaluation/` directory contains probe, transfer, player-identification, ari
 
 The player-style re-evaluation uses five group splits by game; its `MIN_PLY = 50` filter is separate from the training corpus's `--min-ply 6`. It reports balanced accuracy because held-out game splits do not preserve equal class sizes.
 
+## Full-vocabulary next-move transfer
+
+`evaluation/nextmove_full_vocab.py` defines the full 1,932-class transfer task. It extracts target moves 6--200 from the first 3,000 eligible standard rated games in the January 2013 Lichess archive, without an Elo filter. Complete games are partitioned before sampling 32K/8K/10K training/validation/test positions per seed. The frequency baseline uses training labels. All test targets are retained, including labels absent from the sampled training data.
+
+With three paired splits/seeds, frozen PMP-mem reaches 8.82 ± 0.35% top-1 test accuracy versus 4.19 ± 0.04% for an untrained CNN. With 32K training pairs and eight epochs, end-to-end PMP-mem reaches 5.74 ± 0.37%, versus 2.97 ± 0.59% from scratch. These are means and population standard deviations. The attainable performance ceilings and persistence of the advantage with more data or training remain unknown.
+
+The reviewer archive keeps the 27 original measurements in reported_results/ under the run directory. To recalculate the published tables from these measurements, run python3 paper/revision_tog_2026/r2_nextmove_full_20261116/reported_results/summarize.py. A new training run writes to a separate set of output paths. The five protocol tests create their own temporary inputs and can be run before preparing data or model weights.
+
+Place the January 2013 PGN at `lichess_data/lichess_2013_01.pgn`. The task vocabulary is `data_next/chess_vocab.txt`; the reviewer archive supplies this small class dictionary. Checkpoints for PMP, AE and SimCLR must be trained locally. Embedding extraction, the GPU linear solver and fine-tuning require CUDA. Then run:
+
+```bash
+python3 -m unittest discover -s evaluation -p test_nextmove_full_protocol.py -v
+python3 evaluation/nextmove_full_vocab.py prepare
+python3 evaluation/nextmove_full_vocab.py embed
+OPENBLAS_NUM_THREADS=4 MKL_NUM_THREADS=4 OMP_NUM_THREADS=4 python3 evaluation/nextmove_full_vocab.py linear-gpu
+python3 evaluation/nextmove_full_vocab.py finetune
+python3 paper/revision_tog_2026/r2_nextmove_full_20261116/summarize.py
+```
+
+The recorded protocol and aggregate results are included in the reviewer archive. Legacy `test_nextmove.py`, `test_finetune.py` and the next-move portion of `test_ensemble.py` describe the earlier restricted task; they are not the source of these full-vocabulary scores. No sealed-validation data is used by the transfer run.
+
 ## Data and model availability
 
 Game archives, derived datasets, logs, and model checkpoints are excluded from version control. Recreate data with the preparation commands above and train checkpoints locally before running analyses that require them. The repository README describes expected outputs; it does not imply the binaries are present.

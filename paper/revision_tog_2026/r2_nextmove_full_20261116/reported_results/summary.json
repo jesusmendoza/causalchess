@@ -1,0 +1,441 @@
+{
+  "protocol": {
+    "source": "lichess_data/lichess_2013_01.pgn",
+    "source_sha256": "8963b6a1620a0e9c77e5515a0744ec133e86869487188af047bb0a74400dee37",
+    "source_month": "2013-01",
+    "utc_date_range": [
+      "2012.12.31",
+      "2013.01.01"
+    ],
+    "games": 3000,
+    "unique_game_sequences": 3000,
+    "positions": 183581,
+    "extraction_counts": {
+      "parsed_games": 3023,
+      "short_games": 23
+    },
+    "min_target_ply": 6,
+    "max_target_ply": 200,
+    "ply_convention": "target move index, 1-based; board immediately before target",
+    "elo_filter": null,
+    "elo_rationale": "Retain the original transfer domain (2013 all-rating games); the matching requested ply window is 6-200.",
+    "vocabulary_source": "data_next/chess_vocab.txt",
+    "vocabulary_sha256": "70ea732f62727612a4ee6cb4c24bce7a9212ab02e5a147a5a7602009d9737003",
+    "classes": 1932,
+    "observed_classes": 1846,
+    "label_frequency_filter": null,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "split": "64/16/20 percent of game-sequence groups; sample 32000/8000/10000 positions",
+    "split_details": {
+      "0": {
+        "positions": {
+          "train": 32000,
+          "val": 8000,
+          "test": 10000
+        },
+        "games": {
+          "train": 1909,
+          "val": 479,
+          "test": 599
+        },
+        "train_classes": 1738,
+        "test_targets_absent_from_training": 31,
+        "test_piece_placements_also_in_training": 224,
+        "majority": {
+          "top1": 0.0099,
+          "top5": 0.0414,
+          "selected_classes": [
+            983,
+            1712,
+            1225,
+            428,
+            219
+          ]
+        },
+        "split_index_sha256": {
+          "train": "775970e3b08d384dbe9fc07e3681a818dc09210d22c5ca85643530e364e741c8",
+          "val": "f861a205b20359215debb301abd2e8589924e7a48ec80f6b8447000c0428579e",
+          "test": "239b7fbb38a14ad5bbc10fce7f2eab95c5b7cd8b62c12e023beddf236f8d43c3"
+        }
+      },
+      "1": {
+        "positions": {
+          "train": 32000,
+          "val": 8000,
+          "test": 10000
+        },
+        "games": {
+          "train": 1913,
+          "val": 475,
+          "test": 599
+        },
+        "train_classes": 1727,
+        "test_targets_absent_from_training": 60,
+        "test_piece_placements_also_in_training": 232,
+        "majority": {
+          "top1": 0.0094,
+          "top5": 0.0413,
+          "selected_classes": [
+            1225,
+            983,
+            1712,
+            428,
+            219
+          ]
+        },
+        "split_index_sha256": {
+          "train": "c05b7a04c068712dc9711e34aad212ab8f248e783c2e07840578978dd37ba998",
+          "val": "b008ad5ea02a7bb7a7c8c087658f7a421dadb33eae59538e496d239402dd0789",
+          "test": "5ff78b9b4bf1136762b5b83053d2c9127e97313ce5c1fe428df3324f07e2ab00"
+        }
+      },
+      "2": {
+        "positions": {
+          "train": 32000,
+          "val": 8000,
+          "test": 10000
+        },
+        "games": {
+          "train": 1911,
+          "val": 475,
+          "test": 598
+        },
+        "train_classes": 1727,
+        "test_targets_absent_from_training": 41,
+        "test_piece_placements_also_in_training": 214,
+        "majority": {
+          "top1": 0.0115,
+          "top5": 0.0446,
+          "selected_classes": [
+            983,
+            1225,
+            1712,
+            428,
+            1502
+          ]
+        },
+        "split_index_sha256": {
+          "train": "a3b864d97e6bc5767d2c8277f18619d70cb397d7b6c122f4b4ff7bac0e9cc763",
+          "val": "d7069e0154ac497cf789822164c75d634d252e3760bae06c8c59cd3809b6fa4d",
+          "test": "a850c5cb480b733ee098e42f9b9e8e030dbfa515a9badf3bfc4c10fa300a4714"
+        }
+      }
+    },
+    "dataset_sha256": "e1dc6e96710eacb6301c00e3224b6966cb74309b6eedf4059f3cda80e452be33",
+    "fine_tune": {
+      "epochs": 8,
+      "batch_size": 256,
+      "optimizer": "Adam",
+      "lr": 0.0001,
+      "selection": "highest validation top-1; first epoch on ties; test only after selection",
+      "precision": "float32, TF32 enabled",
+      "initialization": "PyTorch default seeded trunk; identical fresh head for all conditions per seed"
+    },
+    "linear": {
+      "estimator": "LogisticRegression",
+      "solver": "lbfgs",
+      "C": 1.0,
+      "max_iter": 2000,
+      "tol": 0.0001,
+      "preprocessing": "StandardScaler fitted on training partition only",
+      "absent_training_classes": "No test rows dropped; test labels absent from fitted classes count as errors",
+      "backend": "SciPy L-BFGS-B: native float32 CUDA warm start (TF32 disabled), final float64 CUDA objective/gradient with original gtol=1e-4 and ftol=64*epsilon64",
+      "backend_change": "CPU run stopped before completion; first exact float64 GPU fit retained as numerical reference. All final linear conditions use the same accelerated solver. Objective, C, feature scaling and final stopping criteria unchanged. Synthetic checks against sklearn differ by less than 5e-7 in probability.",
+      "max_iter_per_stage": 2000
+    },
+    "checkpoints": {
+      "PMP-mem": {
+        "path": "models/prev_move_cnn_v2.pt",
+        "sha256": "7005cc2b59b6dbbd8462c7f7015504a5f2f466165c66d97aaa456c89da92dda3"
+      },
+      "PMP-no-mem": {
+        "path": "models/prev_move_cnn_v2_dedup.pt",
+        "sha256": "1038f0c56f964540967f9a861da280ddeb93fb14b0ffa1c76963f72bfd36ec22"
+      },
+      "AE": {
+        "path": "models/ae_cnn.pt",
+        "sha256": "7fbbfb260b1ba760d0fbdeb9e039a2d97a23fcc426f1da75fb619e2faa9058c7"
+      },
+      "SimCLR": {
+        "path": "models/simclr_cnn_final.pt",
+        "sha256": "8cf676480d9737dffc1d3d7650d6a9518ea76e40a75a943f1d9017ed6810ffa6"
+      }
+    },
+    "script_sha256": "395e8f59275493b7541f4c18454d6b7046c1e0f79508e6f4d09bd8bda70e58d2",
+    "torch": "2.10.0+cu128",
+    "numpy": "1.26.4",
+    "execution": {
+      "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+      "gpu_objective_sha256": "1888aaebc2473283d024f12ffcf123c7d19531b26b2e81b372866b259df25fe3",
+      "runner_current_sha256": "01c7645daaa1996484e52abf7533aa47f23229b15b7e1d7bf49a65cffa1a2177"
+    }
+  },
+  "linear": {
+    "Scratch": {
+      "top1": {
+        "mean_pct": 4.19,
+        "std_pct": 0.03559026084010444,
+        "per_seed_pct": [
+          4.24,
+          4.16,
+          4.17
+        ]
+      },
+      "top5": {
+        "mean_pct": 11.876666666666665,
+        "std_pct": 0.16131404843417105,
+        "per_seed_pct": [
+          11.700000000000001,
+          12.09,
+          11.84
+        ]
+      }
+    },
+    "PMP-mem": {
+      "top1": {
+        "mean_pct": 8.823333333333334,
+        "std_pct": 0.354620297720753,
+        "per_seed_pct": [
+          8.450000000000001,
+          8.72,
+          9.3
+        ]
+      },
+      "top5": {
+        "mean_pct": 24.44666666666667,
+        "std_pct": 0.46578488120113537,
+        "per_seed_pct": [
+          24.42,
+          23.89,
+          25.03
+        ]
+      }
+    },
+    "PMP-no-mem": {
+      "top1": {
+        "mean_pct": 9.003333333333332,
+        "std_pct": 0.2468917891618827,
+        "per_seed_pct": [
+          8.67,
+          9.08,
+          9.26
+        ]
+      },
+      "top5": {
+        "mean_pct": 24.606666666666666,
+        "std_pct": 0.2852289528704181,
+        "per_seed_pct": [
+          24.41,
+          24.4,
+          25.009999999999998
+        ]
+      }
+    },
+    "AE": {
+      "top1": {
+        "mean_pct": 6.169999999999999,
+        "std_pct": 0.1574801574802367,
+        "per_seed_pct": [
+          6.25,
+          6.3100000000000005,
+          5.949999999999999
+        ]
+      },
+      "top5": {
+        "mean_pct": 18.71666666666667,
+        "std_pct": 0.09977753031397249,
+        "per_seed_pct": [
+          18.85,
+          18.61,
+          18.69
+        ]
+      }
+    },
+    "SimCLR": {
+      "top1": {
+        "mean_pct": 1.0833333333333333,
+        "std_pct": 0.052493385826745384,
+        "per_seed_pct": [
+          1.13,
+          1.11,
+          1.01
+        ]
+      },
+      "top5": {
+        "mean_pct": 4.32,
+        "std_pct": 0.25350871122442065,
+        "per_seed_pct": [
+          4.62,
+          4.34,
+          4.0
+        ]
+      }
+    },
+    "Ensemble": {
+      "top1": {
+        "mean_pct": 7.966666666666666,
+        "std_pct": 0.1604853748961427,
+        "per_seed_pct": [
+          7.89,
+          8.19,
+          7.82
+        ]
+      },
+      "top5": {
+        "mean_pct": 21.99,
+        "std_pct": 0.20314198646923556,
+        "per_seed_pct": [
+          22.040000000000003,
+          21.72,
+          22.21
+        ]
+      }
+    }
+  },
+  "finetune": {
+    "Scratch": {
+      "top1": {
+        "mean_pct": 2.97,
+        "std_pct": 0.5872534943843813,
+        "per_seed_pct": [
+          2.53,
+          2.58,
+          3.8
+        ]
+      },
+      "top5": {
+        "mean_pct": 8.2,
+        "std_pct": 1.2811193022769836,
+        "per_seed_pct": [
+          7.6499999999999995,
+          6.98,
+          9.969999999999999
+        ]
+      }
+    },
+    "PMP-mem": {
+      "top1": {
+        "mean_pct": 5.743333333333333,
+        "std_pct": 0.3718721405118816,
+        "per_seed_pct": [
+          5.220000000000001,
+          5.96,
+          6.05
+        ]
+      },
+      "top5": {
+        "mean_pct": 14.450000000000001,
+        "std_pct": 0.5263712251507167,
+        "per_seed_pct": [
+          13.71,
+          14.75,
+          14.89
+        ]
+      }
+    },
+    "PMP-no-mem": {
+      "top1": {
+        "mean_pct": 5.783333333333334,
+        "std_pct": 0.10873004286866746,
+        "per_seed_pct": [
+          5.87,
+          5.8500000000000005,
+          5.63
+        ]
+      },
+      "top5": {
+        "mean_pct": 14.653333333333334,
+        "std_pct": 0.21483844059096072,
+        "per_seed_pct": [
+          14.37,
+          14.7,
+          14.89
+        ]
+      }
+    }
+  },
+  "paired_lifts": {
+    "linear:PMP-mem-Scratch": {
+      "mean_pp": 4.633333333333334,
+      "std_pp": 0.3791510985814963,
+      "per_seed_pp": [
+        4.210000000000001,
+        4.5600000000000005,
+        5.130000000000001
+      ]
+    },
+    "linear:PMP-no-mem-Scratch": {
+      "mean_pp": 4.8133333333333335,
+      "std_pp": 0.2798015169524442,
+      "per_seed_pp": [
+        4.43,
+        4.92,
+        5.09
+      ]
+    },
+    "finetune:PMP-mem-Scratch": {
+      "mean_pp": 2.7733333333333334,
+      "std_pp": 0.4650686926561374,
+      "per_seed_pp": [
+        2.690000000000001,
+        3.38,
+        2.25
+      ]
+    },
+    "finetune:PMP-no-mem-Scratch": {
+      "mean_pp": 2.813333333333334,
+      "std_pp": 0.6959086785555193,
+      "per_seed_pp": [
+        3.3400000000000003,
+        3.2700000000000005,
+        1.83
+      ]
+    }
+  },
+  "baselines": {
+    "Uniform": {
+      "top1": {
+        "mean_pct": 0.051759834368530024,
+        "std_pct": 0.0,
+        "per_seed_pct": [
+          0.051759834368530024,
+          0.051759834368530024,
+          0.051759834368530024
+        ]
+      },
+      "top5": {
+        "mean_pct": 0.2587991718426501,
+        "std_pct": 0.0,
+        "per_seed_pct": [
+          0.2587991718426501,
+          0.2587991718426501,
+          0.2587991718426501
+        ]
+      }
+    },
+    "Training frequency": {
+      "top1": {
+        "mean_pct": 1.0266666666666666,
+        "std_pct": 0.08956685895029595,
+        "per_seed_pct": [
+          0.9900000000000001,
+          0.9400000000000001,
+          1.15
+        ]
+      },
+      "top5": {
+        "mean_pct": 4.243333333333333,
+        "std_pct": 0.15326085243430185,
+        "per_seed_pct": [
+          4.14,
+          4.130000000000001,
+          4.46
+        ]
+      }
+    }
+  }
+}

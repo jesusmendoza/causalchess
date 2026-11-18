@@ -1,0 +1,26 @@
+{
+  "condition": "SimCLR",
+  "seed": 2,
+  "test": {
+    "top1": 0.0101,
+    "top5": 0.04
+  },
+  "n_train": 32000,
+  "n_test": 10000,
+  "fitted_classes": 1727,
+  "iterations": [
+    112
+  ],
+  "warnings": [],
+  "seconds": 11.215887546539307,
+  "optimization": {
+    "objective": 3.1850051155915446,
+    "gradient_inf": 8.370467499591574e-05,
+    "function_calls": 117,
+    "status": "CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL",
+    "warm_iterations": 112,
+    "final_float64_iterations": 0,
+    "dtype": "float64",
+    "backend": "SciPy L-BFGS-B / PyTorch CUDA objective"
+  }
+}

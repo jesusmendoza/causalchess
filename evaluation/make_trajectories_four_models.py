@@ -8,6 +8,7 @@ _sys.path.insert(0, str(_PARENT))
 
 import json
 import platform
+import argparse
 
 import numpy as np
 import torch
@@ -144,6 +145,10 @@ def write_results_markdown(path: Path, san: list[str], fens: list[str], metrics:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", default="paper/figures/test_trajectories.png")
+    parser.add_argument("--metrics-dir", default="paper/revision_tog_2026")
+    args = parser.parse_args()
     np.random.seed(SEED)
     torch.manual_seed(SEED)
     torch.set_num_threads(1)
@@ -152,9 +157,9 @@ def main() -> None:
     if len(kasparov_uci) != EXPECTED_PLIES or len(fens) != EXPECTED_PLIES + 1:
         raise AssertionError("Canonical game validation returned an unexpected length")
 
-    output = _PARENT / "paper/figures/test_trajectories.png"
-    json_path = _PARENT / "paper/revision_tog_2026/results_traj_fixed.json"
-    md_path = _PARENT / "paper/revision_tog_2026/results_traj_fixed.md"
+    output = Path(args.output)
+    json_path = Path(args.metrics_dir) / "results_traj_fixed.json"
+    md_path = Path(args.metrics_dir) / "results_traj_fixed.md"
 
     embeddings: dict[str, np.ndarray] = {}
     metrics: dict[str, dict] = {}
@@ -167,7 +172,7 @@ def main() -> None:
 
     # Figure panels: normalized distances are primary; PCA panels each use a
     # separate fit to avoid pretending the learned spaces share coordinates.
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 6.1), constrained_layout=True)
+    fig, axes = plt.subplots(2, 2, figsize=(7.2, 4.9), constrained_layout=True)
     plies = np.arange(1, len(fens))
     for name, _, _ in MODELS:
         emb = embeddings[name]
@@ -183,15 +188,14 @@ def main() -> None:
             label=f"{name} (final {drift[-1]:.3f})",
         )
 
-    axes[0, 0].set_title("Per-position unit-L2 chord steps")
+    axes[0, 0].set_title("Unit-L2 chord steps", fontsize=10)
     axes[0, 0].set_xlabel("Ply")
     axes[0, 0].set_ylabel("Chord distance (0–2)")
-    axes[0, 1].set_title("Unit-L2 drift from opening")
+    axes[0, 1].set_title("Unit-L2 drift from opening", fontsize=10)
     axes[0, 1].set_xlabel("Position after ply")
     axes[0, 1].set_ylabel("Chord distance (0–2)")
     for ax in axes[0]:
         ax.tick_params(labelsize=8)
-        ax.legend(fontsize=7, frameon=False)
         ax.grid(True, alpha=0.25)
 
     for ax, name in zip(axes[1], ("PMP-mem", "PMP-no-mem")):
@@ -199,15 +203,19 @@ def main() -> None:
         ax.plot(projected[:, 0], projected[:, 1], "-o", color=colors[name], ms=2.1, lw=1.0)
         ax.scatter(projected[0, 0], projected[0, 1], c="green", s=32, marker="s", zorder=5)
         ax.scatter(projected[-1, 0], projected[-1, 1], c="black", s=38, marker="x", zorder=5)
-        ax.set_title(f"{name}: independent PCA")
+        ax.set_title(f"{name}: independent PCA", fontsize=10)
         ax.set_xlabel("PC 1 (own fit)")
         ax.set_ylabel("PC 2 (own fit)")
         ax.tick_params(labelsize=8)
         ax.grid(True, alpha=0.25)
     fig.suptitle(
         "Kasparov–Topalov 1999: complete game (87 plies, 88 positions)",
-        fontsize=12,
+        fontsize=10, y=0.995,
     )
+    fig.legend(axes[0, 0].get_lines(), [name for name, _, _ in MODELS],
+               loc="upper center", bbox_to_anchor=(0.5, 0.955),
+               ncol=4, fontsize=8, frameon=False)
+    fig.get_layout_engine().set(rect=(0, 0, 1, 0.90))
     fig.text(
         0.5, -0.01,
         "Distances use unit-L2 embeddings. PCA fits are independent; coordinates are not comparable across panels.",

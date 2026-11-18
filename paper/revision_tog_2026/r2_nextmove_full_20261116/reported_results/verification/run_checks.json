@@ -1,0 +1,64 @@
+{
+  "linear_runs_verified": 18,
+  "finetune_runs_verified": 9,
+  "disjoint_game_splits_verified": 3,
+  "maximum_final_float64_gradient": 9.947427204089607e-05,
+  "selected_epochs": {
+    "Scratch_0": 2,
+    "PMP-mem_0": 8,
+    "PMP-no-mem_0": 8,
+    "Scratch_1": 2,
+    "PMP-mem_1": 8,
+    "PMP-no-mem_1": 8,
+    "Scratch_2": 8,
+    "PMP-mem_2": 8,
+    "PMP-no-mem_2": 8
+  },
+  "result_sha256": {
+    "linear/Scratch_0.json": "7a31b2dd867d15c0ee6cb4a3a831d5ec0128dc501d496bfe3bad1b4efa1a9d23",
+    "linear/PMP-mem_0.json": "1c429086a7df3dfedf4ce7d6842195289a089fe6041eda147deb43d279a82e32",
+    "linear/PMP-no-mem_0.json": "80f7fb7053ed6b30fe1be518fb4be4b13a0c241bd91e024be4a739a67d72e4d1",
+    "linear/AE_0.json": "649ccc5a2c1c5929fa8173224c37a7cd1c5b192202242848aaf0f94cd797806a",
+    "linear/SimCLR_0.json": "edf493f7ba98b521483522f7d8cbd0bd5a5e6f8078e921f0733282679312d117",
+    "linear/Ensemble_0.json": "98edc55390cbb43db4652ea576296e70a48aa7406a34e4ceba4b3dae08aadee3",
+    "finetune/Scratch_0.json": "481e6768404a98000aa9c00a58d5231894f868eaa34bc529f988f8006c5e98f8",
+    "finetune/PMP-mem_0.json": "b0bd3701fc1f76fb5a12ca88550fe6293d9afd0095bf188000943f8cbbfe2cab",
+    "finetune/PMP-no-mem_0.json": "2dcf463ce3c35c1a1021662e55e2a8a994672c65dbbc57eeae79bdd1b2d95952",
+    "linear/Scratch_1.json": "c8e737eef4f943eaa09a037da6cfb072cddca8c27d10c1bfdfe7cb9f75e0a38f",
+    "linear/PMP-mem_1.json": "e28212a76c2a0ecb27e78fc176db703a850c10b36b2f3947ac8ab123a3443867",
+    "linear/PMP-no-mem_1.json": "653abfa757c2f7953999c0ef4605aefd4359ee0483a2a0c66085560e5d6847b2",
+    "linear/AE_1.json": "a0d22e34172bcbadebfc731c946f125f538bd8654f1668b88d68c5df9b18d8c4",
+    "linear/SimCLR_1.json": "8f9fa1803980ce6f10558f866a511194702e53af21b4e63925b37d9f98f26817",
+    "linear/Ensemble_1.json": "1a91898d1604a794f867f79bf6f33ccac6af2bd573e056c17fe063b3082c1671",
+    "finetune/Scratch_1.json": "d03e96445430b60c7e64972c51aa164e5b4ebd2194246bce87387a2b0a3d7054",
+    "finetune/PMP-mem_1.json": "c5c3fe3d4dd1ab67b60be8bf54001751beca4a8f8073cde919ac961d42ea0fa1",
+    "finetune/PMP-no-mem_1.json": "4bb41b4d445dd48c80ab5421aa627fe9bd58dbfd77024d0ebf8a484310391b6d",
+    "linear/Scratch_2.json": "f53ecfeefd8d53faad7def00227b57157f22ab227e25e8ef9d371dcfdcbe7d46",
+    "linear/PMP-mem_2.json": "080194ee3fa29116e6573cb35ac0724624da5709077c7779c209966c71caec99",
+    "linear/PMP-no-mem_2.json": "2e2fe85383028b1a105eecb0d7b3f689f1edc8b3596b46c7a196d5ae71829f89",
+    "linear/AE_2.json": "c56691d6620dc7acb2fea67987eb783f71d24cea99bf4c9f195f3ecab66d5dd9",
+    "linear/SimCLR_2.json": "d223fd15fe0518bc703ae7459172a9e1b6ab20052fb7926dd8c8a3a38f6341de",
+    "linear/Ensemble_2.json": "60e7bc53c6be3958224289d62f8712469193f897fc50418d86f5249b87ff27cd",
+    "finetune/Scratch_2.json": "9e2ba1795bbbd66e426ece958daf710413ce21cd3dd411a67a42cbf4e737abda",
+    "finetune/PMP-mem_2.json": "bda1758cbc60631a1c5546379b82434bdb3b943772095e9821ca98ebc91f2aed",
+    "finetune/PMP-no-mem_2.json": "4689886b17067324b748fc30e594758961b340d17b344032cda17f182bdb79a2"
+  },
+  "software": {
+    "scipy": "1.13.1",
+    "sklearn": "1.8.0",
+    "torch": "2.10.0+cu128",
+    "numpy": "1.26.4"
+  },
+  "scratch0_pure_float64_reference": {
+    "reference_test": {
+      "top1": 0.0425,
+      "top5": 0.1178
+    },
+    "final_test": {
+      "top1": 0.0424,
+      "top5": 0.117
+    },
+    "objective_difference": 0.0015162718924379703,
+    "note": "Both satisfy the same 1e-4 gradient tolerance; finite-tolerance optimizer trajectories need not give identical predictions."
+  }
+}

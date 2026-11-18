@@ -1,0 +1,175 @@
+{
+  "source": "lichess_data/lichess_2013_01.pgn",
+  "source_sha256": "8963b6a1620a0e9c77e5515a0744ec133e86869487188af047bb0a74400dee37",
+  "source_month": "2013-01",
+  "utc_date_range": [
+    "2012.12.31",
+    "2013.01.01"
+  ],
+  "games": 3000,
+  "unique_game_sequences": 3000,
+  "positions": 183581,
+  "extraction_counts": {
+    "parsed_games": 3023,
+    "short_games": 23
+  },
+  "min_target_ply": 6,
+  "max_target_ply": 200,
+  "ply_convention": "target move index, 1-based; board immediately before target",
+  "elo_filter": null,
+  "elo_rationale": "Retain the original transfer domain (2013 all-rating games); the matching requested ply window is 6-200.",
+  "vocabulary_source": "data_next/chess_vocab.txt",
+  "vocabulary_sha256": "70ea732f62727612a4ee6cb4c24bce7a9212ab02e5a147a5a7602009d9737003",
+  "classes": 1932,
+  "observed_classes": 1846,
+  "label_frequency_filter": null,
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "split": "64/16/20 percent of game-sequence groups; sample 32000/8000/10000 positions",
+  "split_details": {
+    "0": {
+      "positions": {
+        "train": 32000,
+        "val": 8000,
+        "test": 10000
+      },
+      "games": {
+        "train": 1909,
+        "val": 479,
+        "test": 599
+      },
+      "train_classes": 1738,
+      "test_targets_absent_from_training": 31,
+      "test_piece_placements_also_in_training": 224,
+      "majority": {
+        "top1": 0.0099,
+        "top5": 0.0414,
+        "selected_classes": [
+          983,
+          1712,
+          1225,
+          428,
+          219
+        ]
+      },
+      "split_index_sha256": {
+        "train": "775970e3b08d384dbe9fc07e3681a818dc09210d22c5ca85643530e364e741c8",
+        "val": "f861a205b20359215debb301abd2e8589924e7a48ec80f6b8447000c0428579e",
+        "test": "239b7fbb38a14ad5bbc10fce7f2eab95c5b7cd8b62c12e023beddf236f8d43c3"
+      }
+    },
+    "1": {
+      "positions": {
+        "train": 32000,
+        "val": 8000,
+        "test": 10000
+      },
+      "games": {
+        "train": 1913,
+        "val": 475,
+        "test": 599
+      },
+      "train_classes": 1727,
+      "test_targets_absent_from_training": 60,
+      "test_piece_placements_also_in_training": 232,
+      "majority": {
+        "top1": 0.0094,
+        "top5": 0.0413,
+        "selected_classes": [
+          1225,
+          983,
+          1712,
+          428,
+          219
+        ]
+      },
+      "split_index_sha256": {
+        "train": "c05b7a04c068712dc9711e34aad212ab8f248e783c2e07840578978dd37ba998",
+        "val": "b008ad5ea02a7bb7a7c8c087658f7a421dadb33eae59538e496d239402dd0789",
+        "test": "5ff78b9b4bf1136762b5b83053d2c9127e97313ce5c1fe428df3324f07e2ab00"
+      }
+    },
+    "2": {
+      "positions": {
+        "train": 32000,
+        "val": 8000,
+        "test": 10000
+      },
+      "games": {
+        "train": 1911,
+        "val": 475,
+        "test": 598
+      },
+      "train_classes": 1727,
+      "test_targets_absent_from_training": 41,
+      "test_piece_placements_also_in_training": 214,
+      "majority": {
+        "top1": 0.0115,
+        "top5": 0.0446,
+        "selected_classes": [
+          983,
+          1225,
+          1712,
+          428,
+          1502
+        ]
+      },
+      "split_index_sha256": {
+        "train": "a3b864d97e6bc5767d2c8277f18619d70cb397d7b6c122f4b4ff7bac0e9cc763",
+        "val": "d7069e0154ac497cf789822164c75d634d252e3760bae06c8c59cd3809b6fa4d",
+        "test": "a850c5cb480b733ee098e42f9b9e8e030dbfa515a9badf3bfc4c10fa300a4714"
+      }
+    }
+  },
+  "dataset_sha256": "e1dc6e96710eacb6301c00e3224b6966cb74309b6eedf4059f3cda80e452be33",
+  "fine_tune": {
+    "epochs": 8,
+    "batch_size": 256,
+    "optimizer": "Adam",
+    "lr": 0.0001,
+    "selection": "highest validation top-1; first epoch on ties; test only after selection",
+    "precision": "float32, TF32 enabled",
+    "initialization": "PyTorch default seeded trunk; identical fresh head for all conditions per seed"
+  },
+  "linear": {
+    "estimator": "LogisticRegression",
+    "solver": "lbfgs",
+    "C": 1.0,
+    "max_iter": 2000,
+    "tol": 0.0001,
+    "preprocessing": "StandardScaler fitted on training partition only",
+    "absent_training_classes": "No test rows dropped; test labels absent from fitted classes count as errors",
+    "backend": "SciPy L-BFGS-B: native float32 CUDA warm start (TF32 disabled), final float64 CUDA objective/gradient with original gtol=1e-4 and ftol=64*epsilon64",
+    "backend_change": "CPU run stopped before completion; first exact float64 GPU fit retained as numerical reference. All final linear conditions use the same accelerated solver. Objective, C, feature scaling and final stopping criteria unchanged. Synthetic checks against sklearn differ by less than 5e-7 in probability.",
+    "max_iter_per_stage": 2000
+  },
+  "checkpoints": {
+    "PMP-mem": {
+      "path": "models/prev_move_cnn_v2.pt",
+      "sha256": "7005cc2b59b6dbbd8462c7f7015504a5f2f466165c66d97aaa456c89da92dda3"
+    },
+    "PMP-no-mem": {
+      "path": "models/prev_move_cnn_v2_dedup.pt",
+      "sha256": "1038f0c56f964540967f9a861da280ddeb93fb14b0ffa1c76963f72bfd36ec22"
+    },
+    "AE": {
+      "path": "models/ae_cnn.pt",
+      "sha256": "7fbbfb260b1ba760d0fbdeb9e039a2d97a23fcc426f1da75fb619e2faa9058c7"
+    },
+    "SimCLR": {
+      "path": "models/simclr_cnn_final.pt",
+      "sha256": "8cf676480d9737dffc1d3d7650d6a9518ea76e40a75a943f1d9017ed6810ffa6"
+    }
+  },
+  "script_sha256": "395e8f59275493b7541f4c18454d6b7046c1e0f79508e6f4d09bd8bda70e58d2",
+  "torch": "2.10.0+cu128",
+  "numpy": "1.26.4",
+  "execution": {
+    "device": "NVIDIA GeForce RTX 4060 Laptop GPU",
+    "gpu_objective_sha256": "1888aaebc2473283d024f12ffcf123c7d19531b26b2e81b372866b259df25fe3",
+    "runner_current_sha256": "01c7645daaa1996484e52abf7533aa47f23229b15b7e1d7bf49a65cffa1a2177"
+  }
+}
